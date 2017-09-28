@@ -925,8 +925,8 @@ def generate_license():
     shutil.copyfileobj(open("crtlicense.txt"), out)
     for name, pat, file in (("bzip2","bzip2-*", "LICENSE"),
                       ("openssl", "openssl-*", "LICENSE"),
-                      ("Tcl", "tcl8*", "license.terms"),
-                      ("Tk", "tk8*", "license.terms"),
+                      ("Tcl", "tcl-8*", "license.terms"),
+                      ("Tk", "tk-8*", "license.terms"),
                       ("Tix", "tix-*", "license.terms")):
         out.write("\nThis copy of Python includes a copy of %s, which is licensed under the following terms:\n\n" % name)
         dirs = glob.glob(srcdir+"/externals/"+pat)
@@ -947,28 +947,47 @@ class PyDirectory(Directory):
             kw['componentflags'] = 2 #msidbComponentAttributesOptional
         Directory.__init__(self, *args, **kw)
 
-def hgmanifest():
-    # Fetch file list from Mercurial
-    process = subprocess.Popen(['hg', 'manifest'], stdout=subprocess.PIPE)
-    stdout, stderr = process.communicate()
-    # Create nested directories for file tree
-    result = {}
-    for line in stdout.splitlines():
-        components = line.split('/')
-        d = result
-        while len(components) > 1:
-            d1 = d.setdefault(components[0], {})
-            d = d1
-            del components[0]
-        d[components[0]] = None
-    return result
+def filetree(root, excludedirs={"__pycache__"}):
+    """Make file tree of `root' as nested dict"""
+    
+    def path_split_all(path):
+        result=[]
+        while True:
+            path,basename=os.path.split(path)
+            if not basename: return result
+            result.insert(0,basename)
+    
+    cwd = os.getcwd()
+    os.chdir(root)
+    try:
+        # Fetch file list from Mercurial
+        #process = subprocess.Popen(['hg', 'manifest'], stdout=subprocess.PIPE)
+        #stdout, stderr = process.communicate()
+        # Create nested directories for file tree
+        result = {}
+        for dirname, dirs, files in os.walk("."):
+        #for line in stdout.splitlines():
+            components = path_split_all(dirname)[1:]     #"." will always be the first component
+            d = result
+            while components:
+                d1 = d.setdefault(components[0], {})
+                d = d1
+                del components[0]
+            #d[components[0]] = None
+            for file_ in files: d[file_] = None
+            dirs[:] = list(set(dirs) - excludedirs)
+        
+        return result
+    finally:
+        os.chdir(cwd)
 
 
 # See "File Table", "Component Table", "Directory Table",
 # "FeatureComponents Table"
 def add_files(db):
     installer = msilib.MakeInstaller()
-    hgfiles = hgmanifest()
+    # There are no files to be ignored in Lib except __pycache__
+    files_lib = filetree(os.path.join(srcdir, "Lib"))
     cab = CAB("python")
     tmpfiles = []
     # Add all executables, icons, text files into the TARGETDIR component
@@ -1050,7 +1069,7 @@ def add_files(db):
 
     # Add all .py files in Lib, except tkinter, test
     dirs = []
-    pydirs = [(root, "Lib", hgfiles["Lib"], default_feature)]
+    pydirs = [(root, "Lib", files_lib, default_feature)]
     while pydirs:
         # Commit every now and then, or else installer will complain
         db.Commit()
