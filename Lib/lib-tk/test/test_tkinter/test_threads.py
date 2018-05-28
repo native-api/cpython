@@ -63,10 +63,25 @@ class EventThread(threading.Thread):
             c = random.choice(string.ascii_letters)
             self.target.event_generate(c)
 
+class ExtraTksThread(threading.Thread):
+    def __init__(self, threaded):
+        threading.Thread.__init__(self)
+        self.threaded = threaded
+
+    def run(self):
+        while running:
+            tk = tkinter.Tk()
+            if self.threaded:
+                tk.update()
+                tk.update_idletasks()
+            tk.destroy()
+            del tk
+            time.sleep(0.02)
 
 class Main(object):
     def __init__(self):
         self.root = tkinter.Tk()
+        self.tcl_threaded = bool(self.root.tk.call("array","get","tcl_platform","threaded"))
         self.root.bind('<Key>', dummy_handler)
         self.threads = []
 
@@ -91,6 +106,10 @@ class Main(object):
     def add_threads(self):
         for _ in range(20):
             t = EventThread(self.root)
+            self.threads.append(t)
+            t.start()
+        for _ in range(2):
+            t = ExtraTksThread(self.tcl_threaded)
             self.threads.append(t)
             t.start()
 
