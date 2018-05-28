@@ -65,7 +65,7 @@ except ImportError:
     import pickle
 
 try:
-    import threading
+    import threading, thread
 except ImportError:
     _settrace = sys.settrace
 
@@ -634,7 +634,8 @@ class Trace:
             if self.start_time:
                 print '%.2f' % (time.time() - self.start_time),
             bname = os.path.basename(filename)
-            print "%s(%d): %s" % (bname, lineno,
+            tid = thread.get_ident()
+            print "%d: %s(%d): %s" % (tid, bname, lineno,
                                   linecache.getline(filename, lineno)),
         return self.localtrace
 
