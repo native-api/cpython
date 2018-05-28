@@ -264,8 +264,14 @@ if (tcl_lock) { \
 #define LEAVE_OVERLAP \
     Py_BEGIN_ALLOW_THREADS
 
+/* For error handling blocks */
+#define LEAVE_OVERLAP_TCL_NOBRACE \
+    tcl_tstate = NULL; RELEASE_TCL_LOCK
+
 #define LEAVE_OVERLAP_TCL \
-    tcl_tstate = NULL; RELEASE_TCL_LOCK }
+    LEAVE_OVERLAP_TCL_NOBRACE }
+
+
 
 #define ENTER_PYTHON \
 { PyThreadState *tstate = tcl_tstate; tcl_tstate = NULL; PyEval_RestoreThread((tstate)); }
@@ -765,32 +771,43 @@ Tkapp_New(char *screenName, char *baseName, char *className,
 {
     TkappObject *v;
     char *argv0;
+    Tcl_Interp *interp;
+    int threaded;
 
     v = PyObject_New(TkappObject, &Tkapp_Type);
     if (v == NULL)
         return NULL;
 
-    v->interp = Tcl_CreateInterp();
-    v->wantobjects = wantobjects;
-    v->threaded = Tcl_GetVar2Ex(v->interp, "tcl_platform", "threaded",
+    ENTER_TCL
+
+    interp = Tcl_CreateInterp();
+    threaded = Tcl_GetVar2Ex(interp, "tcl_platform", "threaded",
                                 TCL_GLOBAL_ONLY) != NULL;
-    v->thread_id = Tcl_GetCurrentThread();
-    v->dispatching = 0;
+    LEAVE_TCL
 
 #ifndef TCL_THREADS
-    if (v->threaded) {
+    if (threaded) {
         PyErr_SetString(PyExc_RuntimeError, "Tcl is threaded but _tkinter is not");
         Py_DECREF(v);
         return 0;
     }
 #endif
 #ifdef WITH_THREAD
-    if (v->threaded && tcl_lock) {
+    if (threaded && tcl_lock) {
         /* If Tcl is threaded, we don't need the lock. */
         PyThread_free_lock(tcl_lock);
         tcl_lock = NULL;
     }
 #endif
+
+    ENTER_TCL
+    ENTER_OVERLAP
+
+    v->interp = interp;
+    v->wantobjects = wantobjects;
+    v->threaded = threaded;
+    v->thread_id = Tcl_GetCurrentThread();
+    v->dispatching = 0;
 
     v->OldBooleanType = Tcl_GetObjType("boolean");
     v->BooleanType = Tcl_GetObjType("booleanString");
@@ -818,6 +835,7 @@ Tkapp_New(char *screenName, char *baseName, char *className,
     /* This is used to get the application class for Tk 4.1 and up */
     argv0 = (char*)attemptckalloc(strlen(className) + 1);
     if (!argv0) {
+        LEAVE_OVERLAP_TCL_NOBRACE
         PyErr_NoMemory();
         Py_DECREF(v);
         return NULL;
@@ -852,6 +870,8 @@ Tkapp_New(char *screenName, char *baseName, char *className,
 
         args = (char*)attemptckalloc(len);
         if (!args) {
+            /* XXX: Tcl_DeleteInterp? */
+            LEAVE_OVERLAP_TCL_NOBRACE
             PyErr_NoMemory();
             Py_DECREF(v);
             return NULL;
@@ -872,7 +892,7 @@ Tkapp_New(char *screenName, char *baseName, char *className,
     }
 
     if (Tcl_AppInit(v->interp) != TCL_OK) {
-        PyObject *result = Tkinter_Error((PyObject *)v);
+        Tkinter_Error((PyObject *)v);
 #ifdef TKINTER_PROTECT_LOADTK
         if (wantTk) {
             const char *_tkinter_tk_failed;
@@ -885,9 +905,13 @@ Tkapp_New(char *screenName, char *baseName, char *className,
             }
         }
 #endif
+        /* XXX: Tcl_DeleteInterp? */
+        LEAVE_OVERLAP_TCL_NOBRACE
         Py_DECREF((PyObject *)v);
-        return (TkappObject *)result;
+        return NULL;
     }
+
+    LEAVE_OVERLAP_TCL
 
     EnableEventHook();
 
