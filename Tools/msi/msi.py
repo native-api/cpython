@@ -268,8 +268,10 @@ def remove_old_versions(db):
               None,                     # Ignore language
               migrate_features,
               None,                     # Migrate ALL features
-              "REMOVEOLDSNAPSHOT")])
-        props = "REMOVEOLDSNAPSHOT"
+              "REMOVEOLDSNAPSHOT"),
+              (upgrade_code, start, "%s.%s.%d000" % (major, minor, int(micro)+1),
+              None, migrate_features, None, "REMOVEOLDVERSION")])
+        props = "REMOVEOLDSNAPSHOT;REMOVEOLDVERSION"
     else:
         add_data(db, "Upgrade",
             [(upgrade_code, start, current_version,
