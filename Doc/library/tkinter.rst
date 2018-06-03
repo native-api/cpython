@@ -48,16 +48,21 @@ Tk
    Tk is a module that can be loaded into a Tcl interpreter instance. It adds
    Tcl commands (implemented in C) to create and manipulate GUI widgets. Each
    :class:`Tk` object embeds its own Tcl interpreter instance with Tk loaded into
-   it. Tk's widgets are very customizable, though at the cost of a dated appearance.
+   it.
    Tk uses Tcl's event queue to generate and process GUI events. Note
    that unlike some GUI libraries, each interpreter uses only a single thread,
    which has implications for :mod:`tkinter` users (see `Threading model`_).
 
-Ttk
-   Themed Tk (Ttk) is a newer family of Tk widgets that provide a much better
-   appearance on different platforms than many of the classic Tk widgets.
-   Ttk is distributed as part of Tk, starting with Tk version 8.5. Python
-   bindings are provided in a separate module, :mod:`tkinter.ttk`.
+   Since version 8.5, Tk also implements the
+   `Themed Tk (Ttk) <https://www.tcl.tk/man/tcl8.6/TkCmd/ttk_intro.htm>`_
+   family of widgets.
+   They are intended to be the new standard and are recommended
+   for use in new code. The key improvement is they separate
+   appearance and behavior logic and consolidate the former into a "theme".
+   This greately simplifies widget interface and configuration and gives
+   a consistent and more modern and native look across different OSes.
+   Python bindings for Ttk are provided in a separate module,
+   :mod:`tkinter.ttk`.
 
 Tix
    `Tix`<https://core.tcl.tk/jenglish/gutter/packages/tix.html>_ is an older
@@ -68,10 +73,8 @@ Tix
 Tkinter Modules
 ^^^^^^^^^^^^^^^
 
-Most applications will directly use the features provided by :mod:`tkinter`.
-Unless compatibility with very old versions of Tcl/Tk is required, Ttk widgets
-found in :mod:`tkinter.ttk` should also be favoured over their classic Tk
-counterparts.
+:mod:`tkinter` has the core functionality and the bindings for regular Tk
+widgets. 
 
 The :mod:`_tkinter` module provides low-level access to Tcl interpreters in Python,
 using the C interface to the Tcl library. It should rarely be used directly by
