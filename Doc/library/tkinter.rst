@@ -74,7 +74,10 @@ Tkinter Modules
 ^^^^^^^^^^^^^^^
 
 :mod:`tkinter` has the core functionality and the bindings for regular Tk
-widgets. 
+widgets.
+
+:mod:`tkinter.ttk` has bindings for Themed Tk (Ttk) widgets, and :mod:`tkinter.tix`
+for ones from the Tix add-on.
 
 The :mod:`_tkinter` module provides low-level access to Tcl interpreters in Python,
 using the C interface to the Tcl library. It should rarely be used directly by
