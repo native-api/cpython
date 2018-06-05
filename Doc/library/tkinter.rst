@@ -58,10 +58,10 @@ Tk
    it.
    Tk uses Tcl's event queue to generate and process GUI events.
 
-   Since version 8.5, Tk implements the
+   Since version 8.5, Tk also implements the
    `Themed Tk (Ttk) <https://www.tcl.tk/man/tcl8.6/TkCmd/ttk_intro.htm>`_
    family of widgets. They feature much better, consistent and native look
-   across different platforms by separating the appearance and behavior logic.
+   across different platforms.
    Ttk widgets are recommended for use in new code, with their regular
    counterparts mostly reserved for legacy code and special cases.
 
