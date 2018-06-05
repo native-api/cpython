@@ -64,13 +64,10 @@ Tk
    across different platforms by separating the appearance and behavior logic.
    Ttk widgets are recommended for use in new code, with their regular
    counterparts mostly reserved for legacy code and special cases.
-   Python bindings for Ttk are provided in a separate module,
-   :mod:`tkinter.ttk`.
 
 Tix
    `Tix`<https://core.tcl.tk/jenglish/gutter/packages/tix.html>_ is an older
    third-party Tcl package, an add-on for Tk that adds several new widgets.
-   Python bindings are found in the :mod:`tkinter.tix` module.
    It's deprecated in favor of Ttk.
 
 
