@@ -12,7 +12,7 @@
 
 The :mod:`tkinter` package ("Tk interface") is the standard Python interface to
 the Tcl/Tk GUI toolkit. Tcl/Tk and :mod:`tkinter` are available on most Unix
-platforms (including macOS), as well as on Windows systems.
+platforms, including macOS, as well as on Windows systems.
 
 Running ``python -m tkinter`` from the command line should open a window
 demonstrating a simple Tk interface, letting you know that :mod:`tkinter` is
@@ -27,31 +27,36 @@ for more information about supported versions.
 Tkinter is not a thin wrapper, but adds a fair amount of its own logic to
 make the experience more pythonic. This documentation will concentrate on these
 additions and changes, and refer to the official Tcl/Tk documentation for
-descriptions of underlying features.
+details that are unchanged.
 
 
 Architecture
 ------------
 
-Tkinter provides a unified interface to several separate and distinct libraries.
+Tcl/Tk is not a single library but rather consists of a few distinct
+ modules, each with a separate functionality and its own official
+documentation. Python's binary releases also ship an add-on module 
+together with it.
 
 Tcl
-   Like Python, Tcl is a dynamic interpreted programming language. It is most
-   commonly used by C applications to embed a scripting language, or as an
+   Tcl is a dynamic interpreted programming language, just like Python. Though
+   it can be used on its own as a general-purpose programming language, it is
+   most commonly embedded into C applications as a scripting engine or an
    interface to the Tk toolkit. The Tcl library has a C interface to
    create and manage one or more instances of a Tcl interpreter, run Tcl
    commands and scripts in those instances, and add custom commands
-   implemented in either Tcl or C. Tcl provides for an event queue, used
-   for I/O, timers, and by modules.
+   implemented in either Tcl or C. Each interpreter has an event queue,
+   and there are facilities to send events to it and process them.
+   Unlike Python, Tcl's execution model is designed around cooperative
+   multitasking, and Tkinter bridges this difference
+   (see `Threading model`_ for details).
    
 Tk
-   Tk is a module that can be loaded into a Tcl interpreter instance. It adds
-   Tcl commands (implemented in C) to create and manipulate GUI widgets. Each
+   Tk is a `Tcl package <http://wiki.tcl.tk/37432>`_ implemented in C
+   that adds custom commands to create and manipulate GUI widgets. Each
    :class:`Tk` object embeds its own Tcl interpreter instance with Tk loaded into
    it.
-   Tk uses Tcl's event queue to generate and process GUI events. Note
-   that unlike some GUI libraries, each interpreter uses only a single thread,
-   which has implications for :mod:`tkinter` users (see `Threading model`_).
+   Tk uses Tcl's event queue to generate and process GUI events.
 
    Since version 8.5, Tk also implements the
    `Themed Tk (Ttk) <https://www.tcl.tk/man/tcl8.6/TkCmd/ttk_intro.htm>`_
@@ -66,8 +71,9 @@ Tk
 
 Tix
    `Tix`<https://core.tcl.tk/jenglish/gutter/packages/tix.html>_ is an older
-   third-party Tcl module, adding several new widgets to Tk. Python bindings
-   are found in :mod:`tkinter.tix`. It has been deprecated in favor of Ttk.
+   third-party Tcl package, an add-on for Tk that adds several new widgets.
+   Python bindings are found in the :mod:`tkinter.tix` module.
+   It's deprecated in favor of Ttk.
 
 
 Tkinter Modules
