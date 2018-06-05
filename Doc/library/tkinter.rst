@@ -58,14 +58,12 @@ Tk
    it.
    Tk uses Tcl's event queue to generate and process GUI events.
 
-   Since version 8.5, Tk also implements the
+   Since version 8.5, Tk implements the
    `Themed Tk (Ttk) <https://www.tcl.tk/man/tcl8.6/TkCmd/ttk_intro.htm>`_
-   family of widgets.
-   They are intended to be the new standard and are recommended
-   for use in new code. The key improvement is they separate
-   appearance and behavior logic and consolidate the former into a "theme".
-   This greately simplifies widget interface and configuration and gives
-   a consistent and more modern and native look across different OSes.
+   family of widgets. They feature much better, consistent and native look
+   across different platforms by separating the appearance and behavior logic.
+   Ttk widgets are recommended for use in new code, with their regular
+   counterparts mostly reserved for legacy code and special cases.
    Python bindings for Ttk are provided in a separate module,
    :mod:`tkinter.ttk`.
 
