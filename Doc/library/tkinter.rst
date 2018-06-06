@@ -96,74 +96,73 @@ save for a few functions.
 Threading model
 ---------------
 
-Tkinter strives to allow any calls to its API from any Python threads, without
-any limitations, as expected from a Python module. Due to Tcl's architectural
-restrictions, however, that stem from its vastly different threading model, this is not always possible.
+Tkinter strives to allow any calls to its API from any Python threads, without 
+any limitations, as expected from a Python module. Due to Tcl's architectural 
+restrictions, however, that stem from its vastly different threading model, this 
+is not always possible. 
 
-Tcl's execution model is based on cooperative multitasking. Control is passed
-between multiple interpreter instances by sending events (see `event-oriented
-programming -- Tcl/Tk wiki <https://wiki.tcl.tk/1772>`_ for details).
+Tcl's execution model is based on cooperative multitasking. Control is passed 
+between multiple interpreter instances by sending events (see `event-oriented 
+programming -- Tcl/Tk wiki <https://wiki.tcl.tk/1772>`_ for details). 
 
-A Tcl interpreter instance has only one stream of execution and, unlike many
-other GUI toolkits, Tcl/Tk doesn't provide a blocking event loop. Instead, Tcl
-code is supposed to pump the event queue by hand at strategic moments (save for
-events that are generated explicitly in the same OS thread -- these are handled
-immediately by simply passing control from sender to the handler). As such, all
-Tcl commands are designed to work without an event loop running -- only the
-event handlers will not fire until the queue is processed.
+A Tcl interpreter instance has only one stream of execution and, unlike many 
+other GUI toolkits, Tcl/Tk doesn't provide a blocking event loop. Instead, Tcl 
+code is supposed to pump the event queue by hand at strategic moments (save for 
+events that are generated explicitly in the same OS thread -- these are handled 
+immediately by simply passing control from sender to the handler). As such, all 
+Tcl commands are designed to work without an event loop running -- only the 
+event handlers will not fire until the queue is processed. 
 
-In multithreaded environments like Python, the common GUI execution model is
-rather to use a blocking event loop and a dedicated OS thread (called the "UI
-thread") to run it constantly. Usually, the main thread does this after doing
-the initialization. Other threads send work items (events) to its event queue
-when they need to do something in the GUI. Likewise, for any lengthy tasks, the
-UI thread can launch worker threads that report back on their progress via the
-same event queue.
+In multithreaded environments like Python, the common GUI execution model is 
+rather to use a blocking event loop and a dedicated OS thread (called the "UI 
+thread") to run it constantly. Usually, the main thread does this after doing 
+the initialization. Other threads send work items (events) to its event queue 
+when they need to do something in the GUI. Likewise, for any lengthy tasks, the 
+UI thread can launch worker threads that report back on their progress via the 
+same event queue. 
 
-Tkinter implements the multithreaded model as the primary one, but it supports
-pumping events by hand instead of running the event loop, too.
+Tkinter implements the multithreaded model as the primary one, but it supports 
+pumping events by hand instead of running the event loop, too. 
 
-Contrary to most GUI toolkits using the multithreaded model, Tkinter calls can
-be made from any threads -- even worker threads. Conceptually, this can be seen
-as the worker thread sending an event referencing an appropriate payload, and
-waiting for its processing. The implementation, however, can sometimes take a
-shortcut here.
+Contrary to most GUI toolkits using the multithreaded model, Tkinter calls can 
+be made from any threads -- even worker threads. Conceptually, this can be seen 
+as the worker thread sending an event referencing an appropriate payload, and 
+waiting for its processing. The implementation, however, can sometimes use a 
+shortcut here. 
 
-* In threaded Tcl, an interpreter instance, when created, becomes tied to the
-  creating OS thread. Any calls to this interpreter must come from this thread
-  (apart from special inter-thread communication APIs). The upside is that
-  calls to interpreters tied to different threads can run in parallel. Tkinter
-  implements calls from outside the interpreter thread by constructing an event
-  with an appropriate payload, sending it to the instance's queue via the
-  inter-thread communication APIs and waiting for result. As a consequence:
+* In threaded Tcl, an interpreter instance, when created, becomes tied to the 
+creating OS thread. Any calls to this interpreter must come from this thread 
+(apart from special inter-thread communication APIs). The upside is that calls 
+to interpreters tied to different threads can run in parallel. Tkinter 
+implements calls from outside the intrpreter thread by constructing an event 
+with an appropriate payload, sending it to the instance's queue via the 
+inter-thread communication APIs and waiting for result. As a consequence: 
 
-  * To make any calls from outside the interpreter thread, :func:`Tk.mainloop`
-    must be running in the interpreter thread. If it isn't, :class:`RuntimeError`
-    is raised.
+* To make any calls from outside the interpreter thread, :func:`Tk.mainloop` 
+must be running in the interpreter thread. If it isn't, :class:`RuntimeError` is 
+raised. * A few select functions can only be run in the interpreter thread. 
+These are the functions that implement the event loop -- :func:`Tk.mainloop`, 
+:func:`Tk.dooneevent`, :func:`Tk.update`, :func:`Tk.update_ideltasks` -- and 
+:func:`Tk.destroy` that terminates it halfway through. 
 
-  * A few select functions can only be run in the interpreter thread.
-    These are the functions that implement the event loop -- :func:`Tk.mainloop`,
-    :func:`Tk.dooneevent`, :func:`Tk.update`, :func:`Tk.update_idletasks` -- and
-    :func:`Tk.destroy` that terminates it halfway through.
+* For non-threaded Tcl, threads effectively don't exist. So, any Tkinter call is 
+carried out in the calling thread, whatever it happens to be (see 
+:func:`Tk.mainloop`'s entry on how it is implemented in this case). Since Tcl 
+has a single stream of execution, all Tkinter calls are wrapped with a global 
+lock to enforce sequential access. So, in this case, there are no restrictions 
+on calls whatsoever, but only one call, to any interpreter, can be active at a 
+time. 
 
-* For non-threaded Tcl, threads effectively don't exist. So, any Tkinter call is
-  carried out in the calling thread, whatever it happens to be (see
-  :func:`Tk.mainloop`'s entry on how it is implemented in this case). Since Tcl
-  has a single stream of execution, all Tkinter calls are wrapped with a global
-  lock to enforce sequential access. So, in this case, there are no restrictions
-  on calls whatsoever, but only one call, to any interpreter, can be active at a
-  time.
-
-The last thing to note is that Tcl event queues are not per-interpreter but
-rather per-thread. So, a running event loop will process events not only for its
-own interpreter, but also for any others that share the same queue. This is
-transparent for the code though because an event handler is invoked within the
-context of the correct interpreter (and in the correct Python lexical context if
-the handler has a Python payload). There's also no harm in trying to run an
-event loop for two interpreters that may happen to share a queue: in threaded
-Tcl, such a clash is flat-out impossible because they would have to both run in
-the same OS thread, and in non-threaded Tcl, they would take turns processing
-events.
+The last thing to note is that Tcl event queus are not per-interpreter but 
+rather per-thread. So, a running event loop will process events not only for its 
+own interpreter, but also for any others that share the same thread. This is 
+transparent for the code though because an event handler is invoked within the 
+context of the correct interpreter (and in the correct Python lexical context if 
+the handler has a Python payload). There's also no harm in trying to run an 
+event loop for two interpreters that may happen to share a queue: in threaded 
+Tcl, such a clash is flat-out impossible because they would have to both run in 
+the same OS thread, and in non-threaded Tcl, they would take turns processing 
+events. 
 
 
 
