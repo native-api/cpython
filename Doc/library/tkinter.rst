@@ -88,7 +88,6 @@ widgets.
 :mod:`tkinter.ttk` has bindings for Themed Tk (Ttk) widgets, and
 :mod:`tkinter.tix` for ones from the Tix add-on.
 
-
 :mod:`_tkinter` is a C module that directly interfaces with Tcl/Tk via their C
 interface. It's not supposed to be called directly by user code
 save for a few functions.
@@ -96,73 +95,74 @@ save for a few functions.
 Threading model
 ---------------
 
-Tkinter strives to allow any calls to its API from any Python threads, without 
-any limitations, as expected from a Python module. Due to Tcl's architectural 
-restrictions, however, that stem from its vastly different threading model, this 
-is not always possible. 
+Tkinter strives to allow any calls to its API from any Python threads, without
+any limitations, as expected from a Python module. Due to Tcl's architectural
+restrictions, however, that stem from its vastly different threading model, this is not always possible.
 
-Tcl's execution model is based on cooperative multitasking. Control is passed 
-between multiple interpreter instances by sending events (see `event-oriented 
-programming -- Tcl/Tk wiki <https://wiki.tcl.tk/1772>`_ for details). 
+Tcl's execution model is based on cooperative multitasking. Control is passed
+between multiple interpreter instances by sending events (see `event-oriented
+programming -- Tcl/Tk wiki <https://wiki.tcl.tk/1772>`_ for details).
 
-A Tcl interpreter instance has only one stream of execution and, unlike many 
-other GUI toolkits, Tcl/Tk doesn't provide a blocking event loop. Instead, Tcl 
-code is supposed to pump the event queue by hand at strategic moments (save for 
-events that are generated explicitly in the same OS thread -- these are handled 
-immediately by simply passing control from sender to the handler). As such, all 
-Tcl commands are designed to work without an event loop running -- only the 
-event handlers will not fire until the queue is processed. 
+A Tcl interpreter instance has only one stream of execution and, unlike many
+other GUI toolkits, Tcl/Tk doesn't provide a blocking event loop. Instead, Tcl
+code is supposed to pump the event queue by hand at strategic moments (save for
+events that are generated explicitly in the same OS thread -- these are handled
+immediately by simply passing control from sender to the handler). As such, all
+Tcl commands are designed to work without an event loop running -- only the
+event handlers will not fire until the queue is processed.
 
-In multithreaded environments like Python, the common GUI execution model is 
-rather to use a blocking event loop and a dedicated OS thread (called the "UI 
-thread") to run it constantly. Usually, the main thread does this after doing 
-the initialization. Other threads send work items (events) to its event queue 
-when they need to do something in the GUI. Likewise, for any lengthy tasks, the 
-UI thread can launch worker threads that report back on their progress via the 
-same event queue. 
+In multithreaded environments like Python, the common GUI execution model is
+rather to use a blocking event loop and a dedicated OS thread (called the "UI
+thread") to run it constantly. Usually, the main thread does this after doing
+the initialization. Other threads send work items (events) to its event queue
+when they need to do something in the GUI. Likewise, for any lengthy tasks, the
+UI thread can launch worker threads that report back on their progress via the
+same event queue.
 
-Tkinter implements the multithreaded model as the primary one, but it supports 
-pumping events by hand instead of running the event loop, too. 
+Tkinter implements the multithreaded model as the primary one, but it supports
+pumping events by hand instead of running the event loop, too.
 
-Contrary to most GUI toolkits using the multithreaded model, Tkinter calls can 
-be made from any threads -- even worker threads. Conceptually, this can be seen 
-as the worker thread sending an event referencing an appropriate payload, and 
-waiting for its processing. The implementation, however, can sometimes use a 
-shortcut here. 
+Contrary to most GUI toolkits using the multithreaded model, Tkinter calls can
+be made from any threads -- even worker threads. Conceptually, this can be seen
+as the worker thread sending an event referencing an appropriate payload, and
+waiting for its processing. The implementation, however, can sometimes take a
+shortcut here.
 
-* In threaded Tcl, an interpreter instance, when created, becomes tied to the 
-creating OS thread. Any calls to this interpreter must come from this thread 
-(apart from special inter-thread communication APIs). The upside is that calls 
-to interpreters tied to different threads can run in parallel. Tkinter 
-implements calls from outside the intrpreter thread by constructing an event 
-with an appropriate payload, sending it to the instance's queue via the 
-inter-thread communication APIs and waiting for result. As a consequence: 
+* In threaded Tcl, an interpreter instance, when created, becomes tied to the
+  creating OS thread. Any calls to this interpreter must come from this thread
+  (apart from special inter-thread communication APIs). The upside is that
+  calls to interpreters tied to different threads can run in parallel. Tkinter
+  implements calls from outside the interpreter thread by constructing an event
+  with an appropriate payload, sending it to the instance's queue via the
+  inter-thread communication APIs and waiting for result. As a consequence:
 
-* To make any calls from outside the interpreter thread, :func:`Tk.mainloop` 
-must be running in the interpreter thread. If it isn't, :class:`RuntimeError` is 
-raised. * A few select functions can only be run in the interpreter thread. 
-These are the functions that implement the event loop -- :func:`Tk.mainloop`, 
-:func:`Tk.dooneevent`, :func:`Tk.update`, :func:`Tk.update_ideltasks` -- and 
-:func:`Tk.destroy` that terminates it halfway through. 
+  * To make any calls from outside the interpreter thread, :func:`Tk.mainloop`
+    must be running in the interpreter thread. If it isn't, :class:`RuntimeError`
+    is raised.
 
-* For non-threaded Tcl, threads effectively don't exist. So, any Tkinter call is 
-carried out in the calling thread, whatever it happens to be (see 
-:func:`Tk.mainloop`'s entry on how it is implemented in this case). Since Tcl 
-has a single stream of execution, all Tkinter calls are wrapped with a global 
-lock to enforce sequential access. So, in this case, there are no restrictions 
-on calls whatsoever, but only one call, to any interpreter, can be active at a 
-time. 
+  * A few select functions can only be run in the interpreter thread.
+    These are the functions that implement the event loop -- :func:`Tk.mainloop`,
+    :func:`Tk.dooneevent`, :func:`Tk.update`, :func:`Tk.update_idletasks` -- and
+    :func:`Tk.destroy` that terminates it halfway through.
 
-The last thing to note is that Tcl event queus are not per-interpreter but 
-rather per-thread. So, a running event loop will process events not only for its 
-own interpreter, but also for any others that share the same thread. This is 
-transparent for the code though because an event handler is invoked within the 
-context of the correct interpreter (and in the correct Python lexical context if 
-the handler has a Python payload). There's also no harm in trying to run an 
-event loop for two interpreters that may happen to share a queue: in threaded 
-Tcl, such a clash is flat-out impossible because they would have to both run in 
-the same OS thread, and in non-threaded Tcl, they would take turns processing 
-events. 
+* For non-threaded Tcl, threads effectively don't exist. So, any Tkinter call is
+  carried out in the calling thread, whatever it happens to be (see
+  :func:`Tk.mainloop`'s entry on how it is implemented in this case). Since Tcl
+  has a single stream of execution, all Tkinter calls are wrapped with a global
+  lock to enforce sequential access. So, in this case, there are no restrictions
+  on calls whatsoever, but only one call, to any interpreter, can be active at a
+  time.
+
+The last thing to note is that Tcl event queues are not per-interpreter but
+rather per-thread. So, a running event loop will process events not only for its
+own interpreter, but also for any others that share the same queue. This is
+transparent for the code though because an event handler is invoked within the
+context of the correct interpreter (and in the correct Python lexical context if
+the handler has a Python payload). There's also no harm in trying to run an
+event loop for two interpreters that may happen to share a queue: in threaded
+Tcl, such a clash is flat-out impossible because they would have to both run in
+the same OS thread, and in non-threaded Tcl, they would take turns processing
+events.
 
 
 
@@ -233,26 +233,83 @@ Module contents
    Unset the current default root widget and do not use newly-created
    :class:`Tk` instances to set it.
 
-   By default, the first :class:`Tk` created when the default root is unset
-   becomes the default root, and stays it until it's destroyed. Whenever a
-   :class:`Widget` or other entity that requires a parent/master widget
-   is created, and that parent is not specified, the default root is used.
+   .. default-root:
+   
+   By default, the first :class:`Tk` instance created when the default root is
+   unset becomes the default root, and stays it until it's destroyed.
+   Whenever a :class:`Widget` or other entity that requires a parent/master
+   widget is created without specifying one, the default root is used.
    If the default root is not set, such a call will fail.
+   
+   A :class:`Tk` instance created with *useTk=0* is not a candidate for
+   the default root until its :meth:`Tk.loadtk` is called.
 
 
+Bound variables
+^^^^^^^^^^^^^^^
+
+Most Tk widgets can be *bound* to a global Tcl variable
+by setting its `textvariable <https://tcl.tk/man/tcl8.6/TkCmd/options.htm#M-textvariable>`_
+option (or another option for some widgets).
+Then any change to the information in the widget will update the variable,
+and vice versa.
+
+   
 .. class:: Variable(master=None, value=None, name=None)
 
-   Represents a Tcl global variable bound to *master* widget's value via the
-   `textVariable option
-   <https://www.tcl.tk/man/tcl8.6/TkCmd/options.htm#M-textvariable>`_.
+   Abstract base class that wraps a Tcl global variable.
+   
+   *master* is a :class:`Widget` that specifies which Tcl interpreter
+   instance to create the variable in. If omitted, the
+   `default-root`_ is used.
+   
+   *value* is an optional initial value.
+   
+   *name* is an optional name for the Tcl variable. For instance, this
+   allows to use an existing variable. If not specified,
+   an autogenerated name is used.
 
-   *master* is the widget to bind the variable to.
-   *value* is an optional initial value
+   .. method:: Variable.get()
+   .. method:: Variable.set(value)
+   
+   Read or write the underlying Tcl variable.
+   
+   .. method:: Variable.trace_add(self, mode, callback)
+   
+      Define a trace callback for the variable.
+      
+      Delegates to `trace add variable <https://tcl.tk/man/tcl8.6/TclCmd/trace.htm#M14>`_.
 
-StringVar
-IntVar
-DoubleVar
-BooleanVar
+      *mode* is one of ``"read"``, ``"write"``, ``"unset"``, or a list or
+      tuple of these.
+      *callback* must be a function which is called when the variable is
+      read, written or unset.
+
+      Returns an autogenerated name of the callback that can be later be
+      used in :method:`Variable.trace_remove`.
+      
+   .. method:: Variable:trace_remove(self, mode, cbname)
+   
+      Delete the trace callback for a variable.
+      
+      Delegates to `trace remove variable <https://tcl.tk/man/tcl8.6/TclCmd/trace.htm#M22>`_.
+
+      *mode* is one of ``"read"``, ``"write"``, ``"unset"``, or a list or
+      tuple of these.  Must be same as were specified in trace_add().
+
+   
+.. class:: StringVar
+.. class:: IntVar
+.. class:: DoubleVar
+.. class:: BooleanVar
+
+   Classes encapsulating Tcl variables of the specific classes.
+   
+   There's no type for a list variable, :class:`StringVar` can be used for that.
+   It can accept a list as input but on reading, will return its Tcl's Unicode
+   representation.
+
+
 mainloop
 getint
 getdouble
