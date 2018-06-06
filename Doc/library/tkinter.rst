@@ -66,16 +66,16 @@ Tk
    available; :mod:`tkinter` does this automatically), though they are
    typically provided together, and "Tcl/Tk" is the name for the bundle.
 
-Ttk
-   Themed Tk (Ttk) is a newer family of Tk widgets that provide a much better
-   appearance on different platforms than many of the classic Tk widgets.
-   Ttk is distributed as part of Tk, starting with Tk version 8.5. Python
-   bindings are provided in a separate module, :mod:`tkinter.ttk`.
+   Since version 8.5, Tk also implements the
+   `Themed Tk (Ttk) <https://www.tcl.tk/man/tcl8.6/TkCmd/ttk_intro.htm>`_
+   family of widgets. They feature much better, consistent and native look
+   across different platforms.
+   Ttk widgets are recommended for use in new code, with their regular
+   counterparts mostly reserved for legacy code and special cases.
 
 Tix
    `Tix <https://core.tcl.tk/jenglish/gutter/packages/tix.html>`_ is an older
    third-party Tcl package, an add-on for Tk that adds several new widgets.
-   Python bindings are found in the :mod:`tkinter.tix` module.
    It's deprecated in favor of Ttk.
 
 
@@ -87,6 +87,7 @@ widgets.
 
 :mod:`tkinter.ttk` has bindings for Themed Tk (Ttk) widgets, and
 :mod:`tkinter.tix` for ones from the Tix add-on.
+
 
 :mod:`_tkinter` is a C module that directly interfaces with Tcl/Tk via their C
 interface. It's not supposed to be called directly by user code
