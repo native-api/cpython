@@ -567,10 +567,10 @@ BaseWidget
    .. method:: getdouble(s)
    .. method:: getboolean(s)
    
-   Convert a :class:`_tkinter.Tcl_Obj` or a Tcl string
-   representation to the corresponding Python type;
-   also accepts a compatible Python type in which case
-   it is a no-op. Raises :class:`ValueError` if the conversion fails.
+   Convert a :class:`_tkinter.Tcl_Obj`, a Tcl string
+   representation or a compatible Python type
+   to the corresponding Python type.
+   Raises :class:`ValueError` if the conversion fails.
    
    ?Internal, deprecated (it's unused by other code)? The corresponding
    :class:`_tkinter.tkapp` methods should be used instead.
@@ -611,7 +611,73 @@ BaseWidget
    Return ``None`` instead of empty string if there's no result.
    
    
-   .. method:: after(ms, func)
+   .. method:: after(ms, func=None, *args)
+   .. method:: after_idle(func, *args)
+   .. method:: after_cancel(id)
+   .. method:: bell(displayof=0)
+   .. method:: clipboard_get(**kw)
+   .. method:: clipboard_clear(**kw)
+   .. method:: clipboard_append(string, **kw)
+   .. method:: grab_current(self)
+   .. method:: grab_release(self)
+   .. method:: grab_set(self)
+   .. method:: grab_set_global(self)
+   .. method:: grab_status(self)
+   .. method:: option_add(pattern, value, priority = None)
+   .. method:: option_clear(self)
+   .. method:: option_get(name, className)
+   .. method:: option_readfile(fileName, priority = None)
+   .. method:: selection_clear(**kw)
+   .. method:: selection_get(**kw)
+   .. method:: selection_handle(command, **kw)
+   .. method:: selection_own(**kw)
+   .. method:: selection_own_get(**kw)
+   .. method:: send(interp, cmd, *args)
+   .. method:: lower(belowThis=None)
+   .. method:: tkraise(aboveThis=None)
+   .. method:: lift(aboveThis=None)
+   .. method:: winfo_atom(name, displayof=0)
+   .. method:: winfo_atomname(id, displayof=0)
+   .. method:: winfo_cells()
+   .. method:: winfo_children()
+   .. method:: winfo_class()
+   .. method:: winfo_colormapfull()
+   .. method:: winfo_containing(rootX, rootY, displayof=0)
+   .. method:: winfo_depth()
+   .. method:: winfo_exists()
+   .. method:: winfo_fpixels(number)
+   .. method:: winfo_geometry()
+   .. method:: winfo_height()
+   .. method:: winfo_id()
+   .. method:: winfo_interps(displayof=0)
+   .. method:: winfo_ismapped()
+   .. method:: winfo_manager()
+   .. method:: winfo_name()
+   .. method:: winfo_parent()
+   .. method:: winfo_pathname(id, displayof=0)
+   .. method:: winfo_pixels(number)
+   .. method:: winfo_pointerx()
+   .. method:: winfo_pointerxy()
+   .. method:: winfo_pointery()
+   .. method:: winfo_reqheight()
+   .. method:: winfo_reqwidth()
+   .. method:: winfo_rgb(color)
+   .. method:: winfo_rootx()
+   .. method:: winfo_rooty()
+   .. method:: winfo_screen()
+   .. method:: winfo_screencells()
+   .. method:: winfo_screendepth()
+   .. method:: winfo_screenheight()
+   .. method:: winfo_screenmmheight()
+   
+   See `winfo <https://www.tcl.tk/man/tcl8.6/TkCmd/winfo.htm>`_.
+   The below only lists Tkinter-specific semantics.
+   
+   * :meth:`winfo_atom` returns an integer instead of a string.
+   * :meth:`winfo_atom` None
+   
+
+   
    
 Pack
 Place
@@ -730,9 +796,32 @@ Common semantics
 Python-Tcl type conversion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-All Tkinter calls that map to Tcl commands convert
-their arguments from Python types to corresponding Tcl types,
-and convert the result back.
+In Tcl, on script level, `everything is a string <https://wiki.tcl.tk/3018>`_
+and internally represented as a `Tcl_Obj <https://www.tcl.tk/man/tcl8.6/TclLib/Object.htm>`_.
+Due to this, every discernible Tcl value has a string representation.
+If a Tcl command expects a different type (even a compound one)
+
+However, on C API level, a ``Tcl_Obj`` can be initialized directly from
+all sorts of different C types, and Tkinter uses this when passing Python
+objects to Tcl calls -- to avoid any inaccuracies
+(e.g. when passing floating-point numbers)
+and discrepancies between :func:`str` and Tcl string representations.
+
+:class:`bool`, :class:`str`, :class:`bytes` and :class:`float` are
+converted by the corresponding `Tcl_New*Obj <https://www.tcl.tk/man/tcl8.6/TclLib/contents.htm>`_.
+For integer, different APIs are tried until one can accomodate the value.
+Lists and tuples are `converted <https://www.tcl.tk/man/tcl8.6/TclLib/ListObj.htm>`_
+to a Tcl `list <https://www.tcl.tk/man/tcl8.6/TclCmd/list.htm>`_.
+:class:`str`s with wide Unicode characters would produce a :class:`TclError` if
+the Tcl build doesn't support them. A :class:`_tkinter.Tcl_Obj` gives the
+wrapped object, naturally.
+
+For other objects, their :func:`str` is processed.
+
+For the return value, the reverse conversion is done.
+`Tcl_Obj->typePtr <https://www.tcl.tk/man/tcl/TclLib/Object.htm#M6>`
+is used to detemine the type, so e.g. if a command is declared to return
+0 or 1, it will not be converted to ``bool``.
 
 
 
