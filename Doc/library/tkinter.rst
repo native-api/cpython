@@ -12,7 +12,7 @@
 
 The :mod:`tkinter` package ("Tk interface") is the standard Python interface to
 the Tcl/Tk GUI toolkit. Tcl/Tk and Tkinter are available on most Unix
-platforms, including macOS, as well as on Windows systems.
+platforms, including MacOS, as well as on Windows systems.
 
 Running ``python -m tkinter`` from the command line should open a window
 demonstrating a simple Tk interface, letting you know that Tkinter is
@@ -35,8 +35,7 @@ Architecture
 
 Tcl/Tk is not a single library but rather consists of a few distinct
 modules, each with a separate functionality and its own official
-documentation. Python's binary releases also ship an add-on module
-together with it.
+documentation.
 
 Tcl
    Tcl is a dynamic interpreted programming language, just like Python. Though
@@ -51,7 +50,7 @@ Tcl
    this difference (see `Threading model`_ for details).
 
    Each :class:`Tk` object embeds its own Tcl interpreter instance.
-   
+
    Though :mod:`_tkinter` allows to execute entire Tcl scripts, Python
    bindings typically only run a single command at a time.
 
@@ -76,7 +75,8 @@ Tk
 Tix
    `Tix <https://core.tcl.tk/jenglish/gutter/packages/tix.html>`_ is an older
    third-party Tcl package, an add-on for Tk that adds several new widgets.
-   It's deprecated in favor of Ttk.
+   It's deprecated in favor of Ttk. Tkinter provides bindings for Tix,
+   and official Python binary releases come with it bundled.
 
 
 Tkinter Modules
@@ -91,6 +91,7 @@ widgets.
 :mod:`_tkinter` is a C module that directly interfaces with Tcl/Tk via their C
 interface. It's not supposed to be called directly by user code
 save for a few functions.
+
 
 Threading model
 ---------------
@@ -137,13 +138,13 @@ shortcut here.
   inter-thread communication APIs and waiting for result. As a consequence:
 
   * To make any calls from outside the interpreter thread, :func:`Tk.mainloop`
-    must be running in the interpreter thread. If it isn't, :class:`RuntimeError`
+    must be running in the interpreter thread. If it isn't, :exc:`RuntimeError`
     is raised.
 
   * A few select functions can only be run in the interpreter thread.
     These are the functions that implement the event loop -- :func:`Tk.mainloop`,
     :func:`Tk.dooneevent`, :func:`Tk.update`, :func:`Tk.update_idletasks` --
-    and :func:`Tk.loadTk` and :func:`Tk.destroy` that initialize and finalize Tk.
+    and :func:`Tk.loadtk` and :func:`Tk.destroy` that initialize and finalize Tk.
 
 * For non-threaded Tcl, threads effectively don't exist. So, any Tkinter call is
   carried out in the calling thread, whatever it happens to be (see
@@ -171,7 +172,7 @@ Module contents
 
 
 .. attribute:: TclVersion
-.. attribute:: TkVersion
+               TkVersion
 
    Tcl and Tk library versions used, as floating-point numbers
 
@@ -186,27 +187,29 @@ Module contents
    (such as Unix/Linux systems without an X server).  The created object
    can have Tk initialized at a later time
    by calling its :meth:`Tk.loadtk`.
-   
+
    All arguments are the same as in :class:`Tk` constructor.
 
 
-.. class:: TclError
+.. exception:: TclError
 
    An exception raised for an error returned by a Tcl interpreter.
 
 
-.. attribute:: wantobjects = 1
+.. data:: wantobjects = 1
 
-   Whether Tcl call results in new Tk objects should be converted from Tcl
-   types to Python types. An integer; any nonzero value means "true".
-   If not set, string representations of Tcl objects are returned instead.
+   Whether Tcl call results should be automatically
+   :ref:`converted from Tcl types to Python types <tcl-types>`.
+   An integer; any nonzero value means "true".
+   If not set, string representations of retuned Tcl objects are returned
+   instead.
+   A change takes effect for any newly-created :class:`Tk` objects.
 
+   Has no effect for methods that are explicitly documented to return
+   a specific Python type: they manually convert the result from a Tcl
+   call after getting it.
 
-.. attribute:: READABLE
-.. attribute:: WRITABLE
-.. attribute:: EXCEPTION
-
-   Constants used for the *mask* parameter of :func:`createfilehandler`.
+   ? Internal, deprecated?
 
 
 .. class:: EventType
@@ -214,15 +217,15 @@ Module contents
    A enumeration of known
    `Tk event types <https://www.tcl.tk/man/tcl8.6/TkCmd/bind.htm#M7>`_,
    used for :attr:`Event`'s *type* attribute.
+   Derives from :class:`str` and :class:`enum.Enum`.
 
 
 .. class:: Event
 
    Container for the properties of a Tcl event.
 
-   If a callback function is registered using :func:`bind`,
-   :func:`bind_all`, :func:`bind_class`, or :func:`tag_bind`,
-   the callback is called with an :class:`Event` as the first argument.
+   A Tcl event handler implemented in Python is called with an
+   :class:`Event` as the first argument.
 
    Will have the same fields as the corresponding
    `Tk event <https://www.tcl.tk/man/tcl8.6/TkCmd/event.htm#M9>`_
@@ -230,8 +233,8 @@ Module contents
    or a string with a number as returned by Tcl if the event type is unknown.
 
 
-.. _default-root:   
-   
+.. _default-root:
+
 .. function:: NoDefaultRoot()
 
    Unset the current default root window and do not use newly-created
@@ -245,6 +248,115 @@ Module contents
    If the default root is not set, such a call will fail.
 
 
+Constants
+^^^^^^^^^
+
+Various magic constants used in Tcl/Tk API.
+
+.. data:: NO = FALSE = OFF = 0
+          YES = TRUE = ON = 1
+
+   Boolean constants. Tcl also accepts the corresponding
+   lowercase string literals as boolean values.
+   Due to `Python-Tcl type conversion`_, ``True`` and ``False``
+   are accepted, too, wherever a boolean value is expected.
+
+   ? Deprecated (redundant)?
+
+   
+.. data:: N = 'n'
+          S = 's'
+          W = 'w'
+          E = 'e'
+          NW = 'nw'
+          SW = 'sw'
+          NE = 'ne'
+          SE = 'se'
+          NS = 'ns'
+          EW = 'ew'
+          NSEW = 'nsew'
+          CENTER = 'center'
+
+.. data:: NONE = 'none'
+          X = 'x'
+          Y = 'y'
+          BOTH = 'both'
+
+.. data:: LEFT = 'left'
+          TOP = 'top'
+          RIGHT = 'right'
+          BOTTOM = 'bottom'
+
+.. data:: RAISED = 'raised'
+          SUNKEN = 'sunken'
+          FLAT = 'flat'
+          RIDGE = 'ridge'
+          GROOVE = 'groove'
+          SOLID = 'solid'
+
+.. data:: HORIZONTAL = 'horizontal'
+          VERTICAL = 'vertical'
+
+.. data:: NUMERIC = 'numeric'
+
+.. data:: CHAR = 'char'
+          WORD = 'word'
+
+.. data:: BASELINE = 'baseline'
+
+.. data:: INSIDE = 'inside'
+          OUTSIDE = 'outside'
+
+.. data:: SEL = 'sel'
+          SEL_FIRST = 'sel.first'
+          SEL_LAST = 'sel.last'
+          END = 'end'
+          INSERT = 'insert'
+          CURRENT = 'current'
+          ANCHOR = 'anchor'
+          ALL = 'all'
+
+.. data:: NORMAL = 'normal'
+          DISABLED = 'disabled'
+          ACTIVE = 'active'
+          HIDDEN = 'hidden'
+
+.. data:: CASCADE = 'cascade'
+          CHECKBUTTON = 'checkbutton'
+          COMMAND = 'command'
+          RADIOBUTTON = 'radiobutton'
+          SEPARATOR = 'separator'
+
+.. data:: SINGLE = 'single'
+          BROWSE = 'browse'
+          MULTIPLE = 'multiple'
+          EXTENDED = 'extended'
+
+.. data:: DOTBOX = 'dotbox'
+          UNDERLINE = 'underline'
+
+.. data:: PIESLICE = 'pieslice'
+          CHORD = 'chord'
+          ARC = 'arc'
+          FIRST = 'first'
+          LAST = 'last'
+          BUTT = 'butt'
+          PROJECTING = 'projecting'
+          ROUND = 'round'
+          BEVEL = 'bevel'
+          MITER = 'miter'
+
+.. data:: MOVETO = 'moveto'
+          SCROLL = 'scroll'
+          UNITS = 'units'
+          PAGES = 'pages'
+
+   These constants resolve to the corresponding string literals and are
+   suggested for use whenever a command expects the corresponding special
+   literals to avoid
+   `problems associated with magic strings <https://softwareengineering.stackexchange.com/questions/365339/what-is-wrong-with-magic-strings>`_.
+
+
 Bound variables
 ^^^^^^^^^^^^^^^
 
@@ -254,37 +366,40 @@ option (or another option for some widgets).
 Then any change to the information in the widget will update the variable,
 and vice versa.
 
-   
+
 .. class:: Variable(master=None, value=None, name=None)
 
    Base class that wraps a Tcl global variable of an arbitrary type.
-   
-   No processing is done on get and set values except the usual
-   :ref:`tcl types` convertion.
-   
-   *master* is a :class:`Tk` or :class:`Widget` that specifies which Tcl interpreter
-   instance to create the variable in. If omitted, the
+
+   No processing is done on getting and setting values except the usual
+   :ref:`tcl types <tcl-types>` convertion.
+
+   *master* is a :class:`BaseWidget` that specifies which Tcl
+   interpreter instance to create the variable in. If omitted, the
    :ref:`default root <default-root>` is used.
-   
+
    *value* is an optional initial value. If not, an empty string is used.
-   
+
    *name* is an optional Tcl name for the variable. For instance, this
    allows to use an existing variable. If not specified,
    an autogenerated name is used.
-   
+
    .. method:: __str__()
-   
+
    Returns the underlying Tcl variable's name.
+
+   ?Not an official promise (it's primarily needed to be able to pass Variable to getvar/setvar and wait_variable)
+
 
    .. method:: get()
    .. method:: set(value)
-   
+
    Read or write the underlying Tcl variable.
-   
+
    .. method:: trace_add(mode, callback)
-   
+
       Define a trace callback for the variable.
-      
+
       Delegates to `trace add variable <https://tcl.tk/man/tcl8.6/TclCmd/trace.htm#M14>`_.
 
       *mode* is one of ``"read"``, ``"write"``, ``"unset"``, or a list or
@@ -297,388 +412,565 @@ and vice versa.
 
       Returns an autogenerated name of the callback that can later be
       used in :meth:`trace_remove`.
+
       
    .. method:: trace_remove(mode, cbname)
-   
+
       Delete the trace callback for a variable.
-      
+
       Delegates to `trace remove variable <https://tcl.tk/man/tcl8.6/TclCmd/trace.htm#M22>`_.
 
       *mode* is one of ``"read"``, ``"write"``, ``"unset"``, or a list or
       tuple of these.  Must be same as were specified in :meth:`trace_add`.
-      
+
       *cbname* is the callback name that was returned by :meth:`trace_add`.
 
-   .. method:: trace_info()
-   
-      Delegates to `trace info variable <https://tcl.tk/man/tcl8.6/TclCmd/trace.htm#M26>`_.
       
+   .. method:: trace_info()
+
+      Delegates to `trace info variable <https://tcl.tk/man/tcl8.6/TclCmd/trace.htm#M26>`_.
+
       Returns a list of tuples.
+
       
    .. method:: trace_variable(mode, callback)
-   .. method:: trace_vdelete(mode, callback)
-   .. method:: trace_vinfo(mode, callback)
-   .. method:: trace(mode, callback)
-   
+               trace_vdelete(mode, callback)
+               trace_vinfo(mode, callback)
+               trace(mode, callback)
+
       Deprecated counterparts to :meth:`Variable.trace_add`,
       :meth:`Variable.trace_remove` and :meth:`Variable.trace_info`,
       correspondingly.
       :meth:`trace` is an alias to :meth:`trace_variable`.
-      
-      Delegate to likewise deprecated ``trace variable``, ``trace vdelete``
-      and ``trace vinfo`` Tk commands.
-      
-   
+
+      Delegate to likewise deprecated `trace variable`, `trace vdelete`
+      and `trace vinfo` Tk commands.
+
+
 .. class:: StringVar
-.. class:: IntVar
-.. class:: DoubleVar
-.. class:: BooleanVar
+           IntVar
+           DoubleVar
+           BooleanVar
 
    Classes that enforce converting the value to/from the specified Python type
-   when getting/setting it.
-   
-   There's no type for a list variable, :class:`StringVar` can be used for that.
-   It can accept a list as input but on reading, will return its Tcl's (Unicode)
-   string representation that can be :func:`eval`'ed.
-   
+   when getting/setting it. They also change the default initial value
+   to the default value of the corresponding type.
+
+   There's no type for a list variable, the base :class:`Variable` can be used for that.
+
    :meth:`IntVar.get` falls back to :class:`float` if conversion to :class:`int` fails.
 
 
 .. :func:: mainloop
 
    Run :meth:`Tk.mainloop` for the :ref:`default root <default-root>`.
-   
+
    ?Deprecated?
 
 .. :function:: getint(value)
-.. :function:: getdouble(value)
-.. :function:: getboolean(value)
+               getdouble(value)
+               getboolean(value)
 
    Convert a value received from Tcl to the corresponding Python type.
-   
-   ?Deprecated (it's unused by other code)? The corresponding methods of :mod:`_tkinter`
-   are to be used instead.
 
-   
+   ?Deprecated (it's unused by other code)? The corresponding methods of :mod:`_tkinter.tkapp`
+   should be used instead.
+
+
 Tk objects
-^^^^^^^^^^   
-   
+^^^^^^^^^^
+
+The :class:`Tk` class encapsulates a Tcl interpreter,
+`Tk application and its root window <https://www.tcl.tk/man/tcl8.6/TkLib/Tk_Init.htm#M5>`_.
+
+Due to encapsulating a top-level window widget,
+:class:`Tk` has all the members of :class:`BaseWidget` and :class:`Wm`.
+The following only lists members specific to :class:`Tk` and inherited members
+with changed semantics.
+
+By the means of :meth:`object.__getattr__`, it also provides transparent access to
+attributes of the underlying :attr:`BaseWidget.tk` object.
+
+
 .. class:: Tk(screenName=None, baseName=None, className='Tk', useTk=1, sync=0, use=None)
 
-   The :class:`Tk` class encapsulates a Tcl interpreter,
-   `Tk application and its root window <https://www.tcl.tk/man/tcl8.6/TkLib/Tk_Init.htm#M5>`_.
-   
-   Due to encapsulating a top-level widget,
-   :class:`Tk` also has all the members of :class:`BaseWidget` and :class:`Wm`.   
-   By the means of :meth:`object.__getattr__`, it also provides transparent access to all
-   attributes of the underlying :attr:`Tk.tk` object.
-   A :class:`Tk` instance is acceptable wherever a :class:`Widget` is expected.
-
-   The following only lists methods specific to :class:`Tk` and inherited methods
-   with changed semantics.
-
-   The constructor delegates to `Tk_Init <https://www.tcl.tk/man/tcl8.6/TkLib/Tk_Init.htm>`_.
+   Create a Tcl interpreter, optionally load Tk into it and
+   `initialize the Tk application <https://www.tcl.tk/man/tcl8.6/TkLib/Tk_Init.htm>`_,
+   which includes creating its root window widget.
 
    All arguments are optional and are not needed in the vast majority of cases.
-   
+
    *screenName* specifies an alternative X server screen to use by
    `assigning it <https://www.tcl.tk/man/tcl8.6/TclCmd/tclvars.htm#M5>`_ to the ``DISPLAY``
    environment variable in Tcl before Tk initialization.
-   
-   *className* is assigned to `argv0 <https://www.tcl.tk/man/tcl8.6/TclCmd/tclvars.htm#M47>`_.
-   
+
+   *baseName* is only used to search for startup scripts (see below).
+
+   *className* is assigned to Tcl's `argv0 <https://www.tcl.tk/man/tcl8.6/TclCmd/tclvars.htm#M47>`_
+   and is also used to search for startup scripts.
+
    If *useTk* is set to 0, Tk is not loaded into the interpreter
    and the root window is not created.
    This can be done at a later time by calling :meth:`Tk.loadtk()`.
-   
+
    *sync* and *use* add
    `-sync and -use options to Tcl's argv <https://www.tcl.tk/man/tcl8.6/UserCmd/wish.htm#M4>`_.
 
    After loading Tk (if that was requested), the constructor runs startup scripts
    unless :option:`-E` was specified. The startup scripts are searched for
-   in ``$HOME`` or current directory if ``$HOME`` is unset, with names
+   in ``$HOME`` (or current directory if ``$HOME`` is unset), with names
    ``<className>.tcl``, ``<className>.py``, ``<baseName>.tcl`` and ``<baseName>.py``,
    in that order. Tcl scripts are executed in the underlying Tcl interpreter.
    Python scripts are executed in a private namespace that has all public
    :mod:`tkinter` members and ``self`` that references the current :class:`Tk` object.
-   
-   
-   .. method:: Tk.loadtk()
 
-   Initializes Tk in the underlying interpreter and creates the Tk root widget.
-   If Tk has already been initialized, the method has no effect.
-   
-   
-   .. method:: Tk.destroy()
-   
-   Destroys the Tk root window, all child widgets and the Tk application.
-   All Tk Tcl commands in the interpreter are replaced with stubs that return an error,
-   so any further calls that delegate to them will fail.
-   
-   Delegates to `destroy <https://www.tcl.tk/man/tcl8.6/TkCmd/destroy.htm>`_.
-   
-   With threaded Tcl, :meth:`Tk.destroy` can only be called from the interpreter
-   thread, but its call can be arranged from another thread with
-   :meth:`Widget.after`:
-   
-   >>> tk.after(0,tk.destroy())
 
-   
-   .. attribute:: Tk.tk
-   
-   The underlying :class:`_tkinter.tkapp` object.
+   .. method:: loadtk()
 
-   
+      Initializes Tk in the underlying interpreter and creates the Tk root window.
+      If Tk has already been initialized, this method has no effect.
+
+      Delegates to `Tk_Init <https://www.tcl.tk/man/tcl8.6/TkLib/Tk_Init.htm>`_.
+
+
+   .. method:: destroy()
+
+      Destroys the Tk root window, all child widgets and the Tk application.
+      All Tk Tcl commands in the interpreter are replaced with stubs that return an error,
+      so any further calls that delegate to them will fail with a :exc:`TclError`.
+
+      Delegates to `destroy <https://www.tcl.tk/man/tcl8.6/TkCmd/destroy.htm>`_.
+
+      With threaded Tcl, :meth:`destroy` can only be called from the interpreter
+      thread, but its call can be arranged from another thread with
+      :meth:`BaseWidget.after`:
+
+      >>> self.after(0,self.destroy)
+
+
    .. method:: report_callback_exception(type, value, traceback)
-   
-   A callback that is called from within exception handler
-   if Python payload in an event handler
-   raises an exception. The default implementation prints the
-   exception to :attr:`sys.stderr`.
-   
-   (Re)raising an exception here will cause it to propagate
-   ?where?.
-   
 
-Widgets
--------
+      This method is called from within an ``except`` clause
+      if Python payload in a Tcl callback (event handler,
+      trace handler etc) raises an exception.
+      The default implementation prints the
+      exception details to :attr:`sys.stderr`.
 
-These classes provide Python bindings for regular Tk widgets
-as well as base classes for all other widget bindings.
-
-All concrete widget classes (save for :class:`Tk`) derive from :class:`Widget`.
-Some also derive from mixin classes that provide interfaces specific
-to some categories of widgets.
+      (Re)raising an exception here will cause it to propagate
+      into the function that triggered the callback
+      (i.e. an event loop, Tcl variable assignment,)
+      which
 
 
-Base classes
-^^^^^^^^^^^^
+Widget base classes
+-------------------
+
+These classes provide functionality common for all widgets
+or a group of widgets.
 
 BaseWidget
-~~~~~~~~~~
+^^^^^^^^^^
 
-.. class:: BaseWidget(master, cnf={}, kw={}, extra=())
+Base abstract class that wraps functionality common to toplevel Tk widgets:
+:class:`Tk` and :class:`TopLevel`.
+Non-toplevel widgets derive from :class:`Widget` instead.
 
-   Base abstract class that wraps functionality common to all Tk widgets.
-   
+.. class:: BaseWidget(master, widgetName, cnf={}, kw={}, extra=())
+
    Derived classes typically change the constructor signature,
    making *kw* into ``**kwargs`` and omitting *extra*,
    but use these arguments when calling the base constructor.
-   
+
+   *widgetName* is the Tcl command used to create the widget;
+   also becomes the :attr:`widgetName` attribute.
+
    *cnf* and *kw* are combined into a dictionary.
-   A few special items, if present, are popped and used specially:
-   
-   * ``name`` becomes the Tk path name for the widget.
-     If *master* already has a child widget with this name, it's destroyed.
-     
-   * Any key that is a :class:`type` is treated as a customizer:
-     after creating the widget, each's
-     ``configure`` method is called with ``self``
-     and the item's value as arguments.
+   A few special items, if present, are popped out and used specially:
 
-   
-   .. attribute:: master
-   
-   Parent widget. Read-only. Since :class:`Tk`s are root widgets,
-   for them, it is ``None``.
-   
-   
-   .. attribute:: children
-   
-   A dictionary of (*Tk pathname*, *widget*). Read-only.
-   
-   
-   .. attribute:: widgetName
-   
-   Tk name for this widget class (more specificlly, the Tcl command
-   that was used to create the widget). Read-only.
-   
-   
-   .. method:: destroy()
-   
-   Destroy the widget and all its children recursively.
-   
-   Delegates to `destroy <https://www.tcl.tk/man/tcl8.6/TkCmd/destroy.htm>`_.
+   * ``name`` becomes the Tk path name for the widget
+     (otherwise, an autogenerated name is used).
+     If *master* already has a child widget with this name, it's
+     :meth:`destroy`'ed first.
 
-   
-   .. method:: tk_strictMotif(boolean=None)
-   
-   See `tk_strictMotif <https://www.tcl.tk/man/tcl8.6/TkCmd/tkvars.htm#M6>`_.
-   
-   
-   .. method:: tk_bisque()
-   
-   See `tk_bisque <https://www.tcl.tk/man/tcl8.6/TkCmd/palette.htm>`_.
-   
-   
-   .. method:: tk_setPalette(*args, **kwargs)
-   
-   See `tk_setPalette <https://www.tcl.tk/man/tcl8.6/TkCmd/palette.htm>`_.
-   
-   *args* and *kwargs* become regular and keyword arguments, respectively.
-   
-   
-   .. method:: wait_variable(name='PY_VAR')
-   
-   Wait until the variable is modified. *name* is the name of the Tcl variable.
-   Due to the way `Python-Tcl type conversion` works, a :class:`Variable` can
-   be passed.
-   
-   Delegates to `tkwait variable <https://www.tcl.tk/man/tcl8.6/TkCmd/tkwait.htm>`_.
-   
-   
-   .. method:: waitvar(name='PY_VAR')
-   
-   ?A deprecated alias to :meth:`wait_variable`.
-   
-   
-   .. method:: wait_window(window=None)
-   
-   Wait until the *window* :class:`Widget` is destroyed;
-   defaults to the current widget.
-   
-   Delegates to `tkwait window <https://www.tcl.tk/man/tcl8.6/TkCmd/tkwait.htm>`_.
-   
-   
-   .. method:: wait_visibility(window=None)
-   
-   Wait until the *window* :class:`Widget` changes visibility state;
-   defaults to the current widget.
-   
-   Delegates to `tkwait visibility <https://www.tcl.tk/man/tcl8.6/TkCmd/tkwait.htm>`_.
-   
-   .. warning::
-   
-      This function is vulnerable to race conditions if something
-      (e.g. the user closing the window) can change the widget's visibility
-      at any moment. Polling :meth:`Wm.winfo_visible`
-      should be preferred in such cases.
-      
-      
-   .. method:: getvar(name='PY_VAR')
-   .. method:: setvar(name='PY_VAR', value='1')
-    
-   Get or set a Tcl variable *name*.
-   Due to the way `Python-Tcl type conversion` works, a :class:`Variable` can
-   be passed, too.
+   * Any item whose key is a :class:`type` is treated as a set of
+     widget-specific options for the corresponding :class:`Widget` subtype:
+     after creating the widget, the type's
+     ``configure`` method is called with ``self`` as the first argument
+     and the item's value as the second.
 
 
-   .. method:: getint(s)
-   .. method:: getdouble(s)
-   .. method:: getboolean(s)
-   
-   Convert a :class:`_tkinter.Tcl_Obj`, a Tcl string
-   representation or a compatible Python type
-   to the corresponding Python type.
-   Raises :class:`ValueError` if the conversion fails.
-   
-   ?Internal, deprecated (it's unused by other code)? The corresponding
-   :class:`_tkinter.tkapp` methods should be used instead.
-   
-   
-   .. method:: focus_get()
-   .. method:: focus_displayof()
-   .. method:: focus_lastfor()
-   
-   Delegate to `focus <https://www.tcl.tk/man/tcl8.6/TkCmd/focus.htm#M5>`_,
-   `focus -displayof <https://www.tcl.tk/man/tcl8.6/TkCmd/focus.htm#M7>_,
-   and `focus -lastfor <https://www.tcl.tk/man/tcl8.6/TkCmd/focus.htm#M9>`,
-   correspondingly.
-   
-   Return ``None`` instead of empty string if there's no result.
+Attributes
+~~~~~~~~~~
 
-   
-   .. method:: focus_set()
-   .. method:: focus()
-   .. method:: focus_force()
-   
-   See `focus *window* <https://www.tcl.tk/man/tcl8.6/TkCmd/focus.htm#M6>`_,
-   `focus -force <https://www.tcl.tk/man/tcl8.6/TkCmd/focus.htm#M8>`_.
-   
-   ? :meth:`focus` is a deprecated alias to :math:`focus_set`?
-   
-   
-   .. method:: tk_focusFollowsMouse()
+   .. attribute:: BaseWidget.master
 
-   See `tk_focusFollowsMouse <https://www.tcl.tk/man/tcl8.6/TkCmd/focusNext.htm>`_.
+      Parent widget. Read-only. Since :class:`Tk`'s are root widgets,
+      for them, it is ``None``.
 
-   
-   .. method:: tk_focusNext()
-   .. method:: tk_focusPrev()
 
-   Delegate to `tk_focusNext and tk_focusPrev <https://www.tcl.tk/man/tcl8.6/TkCmd/focusNext.htm>`_.
-   
-   Return ``None`` instead of empty string if there's no result.
-   
-   
-   .. method:: after(ms, func=None, *args)
-   .. method:: after_idle(func, *args)
-   .. method:: after_cancel(id)
-   .. method:: bell(displayof=0)
-   .. method:: clipboard_get(**kw)
-   .. method:: clipboard_clear(**kw)
-   .. method:: clipboard_append(string, **kw)
-   .. method:: grab_current(self)
-   .. method:: grab_release(self)
-   .. method:: grab_set(self)
-   .. method:: grab_set_global(self)
-   .. method:: grab_status(self)
-   .. method:: option_add(pattern, value, priority = None)
-   .. method:: option_clear(self)
-   .. method:: option_get(name, className)
-   .. method:: option_readfile(fileName, priority = None)
-   .. method:: selection_clear(**kw)
-   .. method:: selection_get(**kw)
-   .. method:: selection_handle(command, **kw)
-   .. method:: selection_own(**kw)
-   .. method:: selection_own_get(**kw)
-   .. method:: send(interp, cmd, *args)
-   .. method:: lower(belowThis=None)
-   .. method:: tkraise(aboveThis=None)
-   .. method:: lift(aboveThis=None)
-   .. method:: winfo_atom(name, displayof=0)
-   .. method:: winfo_atomname(id, displayof=0)
-   .. method:: winfo_cells()
-   .. method:: winfo_children()
-   .. method:: winfo_class()
-   .. method:: winfo_colormapfull()
-   .. method:: winfo_containing(rootX, rootY, displayof=0)
-   .. method:: winfo_depth()
-   .. method:: winfo_exists()
-   .. method:: winfo_fpixels(number)
-   .. method:: winfo_geometry()
-   .. method:: winfo_height()
-   .. method:: winfo_id()
-   .. method:: winfo_interps(displayof=0)
-   .. method:: winfo_ismapped()
-   .. method:: winfo_manager()
-   .. method:: winfo_name()
-   .. method:: winfo_parent()
-   .. method:: winfo_pathname(id, displayof=0)
-   .. method:: winfo_pixels(number)
-   .. method:: winfo_pointerx()
-   .. method:: winfo_pointerxy()
-   .. method:: winfo_pointery()
-   .. method:: winfo_reqheight()
-   .. method:: winfo_reqwidth()
-   .. method:: winfo_rgb(color)
-   .. method:: winfo_rootx()
-   .. method:: winfo_rooty()
-   .. method:: winfo_screen()
-   .. method:: winfo_screencells()
-   .. method:: winfo_screendepth()
-   .. method:: winfo_screenheight()
-   .. method:: winfo_screenmmheight()
-   
-   See `winfo <https://www.tcl.tk/man/tcl8.6/TkCmd/winfo.htm>`_.
-   The below only lists Tkinter-specific semantics.
-   
-   * :meth:`winfo_atom` returns an integer instead of a string.
-   * :meth:`winfo_atom` None
-   
+   .. attribute:: BaseWidget.children
 
-   
-   
+      A dictionary of (*Tk pathname*, *widget*). Read-only.
+
+
+   .. attribute:: BaseWidget.tk
+
+      The underlying :class:`_tkinter.tkapp` object.
+
+
+   .. attribute:: BaseWidget.widgetName
+
+      Tk name for this widget class (more specifically, the Tcl command
+      that was used to create the widget). Read-only.
+
+      :class:`Tk` doesn't have this attribute.
+
+
+Lifecycle
+~~~~~~~~~
+
+   .. method:: BaseWidget.destroy()
+
+      Destroy the widget and all its children recursively.
+
+      Delegates to `destroy <https://www.tcl.tk/man/tcl8.6/TkCmd/destroy.htm>`_.
+
+
+Palette
+~~~~~~~
+
+   .. method:: BaseWidget.tk_strictMotif(boolean=None)
+
+      See `tk_strictMotif <https://www.tcl.tk/man/tcl8.6/TkCmd/tkvars.htm#M6>`_.
+
+
+   .. method:: BaseWidget.tk_bisque()
+
+      See `tk_bisque <https://www.tcl.tk/man/tcl8.6/TkCmd/palette.htm>`_.
+
+
+   .. method:: BaseWidget.tk_setPalette(*args, **kwargs)
+
+      See `tk_setPalette <https://www.tcl.tk/man/tcl8.6/TkCmd/palette.htm>`_.
+
+      *args* and *kwargs* are flattened and combined into a list that is passed
+      to the underlying command as arguments.
+
+
+Waiting for conditions
+~~~~~~~~~~~~~~~~~~~~~~
+
+   .. method:: BaseWidget.wait_variable(name='PY_VAR')
+               BaseWidget.waitvar(name='PY_VAR')
+
+      Wait until the variable is modified. *name* is the name of the Tcl variable
+      or a :class:`Variable`.
+
+      Delegates to `tkwait variable <https://www.tcl.tk/man/tcl8.6/TkCmd/tkwait.htm>`_.
+
+      ? :meth:`BaseWidget.waitvar` is deprecated?
+
+
+   .. method:: BaseWidget.wait_window(window=None)
+
+      Wait until the *window* :class:`Widget` is destroyed;
+      defaults to the current widget.
+
+      Delegates to `tkwait window <https://www.tcl.tk/man/tcl8.6/TkCmd/tkwait.htm>`_.
+
+
+   .. method:: BaseWidget.wait_visibility(window=None)
+
+      Wait until the *window* :class:`Widget` changes visibility state;
+      defaults to the current widget.
+
+      Delegates to `tkwait visibility <https://www.tcl.tk/man/tcl8.6/TkCmd/tkwait.htm>`_.
+
+      .. warning::
+
+         This function is vulnerable to race conditions if something
+         (e.g. the user closing the window) can change the widget's visibility
+         at any moment. Polling :meth:`winfo_viewable`
+         should be preferred in such cases.
+
+
+Getting/setting Tcl values
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   .. method:: BaseWidget.getvar(name='PY_VAR')
+               BaseWidget.setvar(name='PY_VAR', value='1')
+
+      Get or set a Tcl variable *name* or a :class:`Variable`.
+
+      Unlike :meth:`Variable.get` and :meth:`Variable.set`,
+      these functions do not do any special type conversions
+      for :class:`Variable` subtypes.
+
+      ?Internal/deprecated (it's unused by anything but tests), use Variable.get/set instead?
+
+
+   .. method:: BaseWidget.getint(s)
+               BaseWidget.getdouble(s)
+               BaseWidget.getboolean(s)
+
+      Convert a :class:`_tkinter.Tcl_Obj`, a Tcl string
+      representation or a compatible Python type
+      to the specific Python type.
+      Raises :exc:`ValueError` if the conversion fails.
+
+      ?Internal, deprecated (it's unused by other code)? The corresponding
+      :class:`_tkinter.tkapp` methods should be used instead.
+
+
+Keyboard focus
+~~~~~~~~~~~~~~
+
+   .. method:: BaseWidget.focus_get()
+               BaseWidget.focus_displayof()
+               BaseWidget.focus_lastfor()
+
+      Delegate to `focus <https://www.tcl.tk/man/tcl8.6/TkCmd/focus.htm#M5>`_,
+      `focus -displayof <https://www.tcl.tk/man/tcl8.6/TkCmd/focus.htm#M7>`_,
+      and `focus -lastfor <https://www.tcl.tk/man/tcl8.6/TkCmd/focus.htm#M9>`_,
+      correspondingly.
+
+      Return ``None`` instead of an empty string if there's no result.
+
+
+   .. method:: BaseWidget.focus_set()
+               BaseWidget.focus()
+               BaseWidget.focus_force()
+
+      Delegate to `focus`__ and
+      `focus -force <https://www.tcl.tk/man/tcl8.6/TkCmd/focus.htm#M8>`_,
+      with the current widget as argument.
+
+      ? :meth:`BaseWidget.focus` is a deprecated alias to :meth:`focus_set`?
+
+      __ https://www.tcl.tk/man/tcl8.6/TkCmd/focus.htm#M6
+
+
+   .. method:: BaseWidget.tk_focusFollowsMouse()
+
+      See `tk_focusFollowsMouse <https://www.tcl.tk/man/tcl8.6/TkCmd/focusNext.htm>`_.
+
+
+   .. method:: BaseWidget.tk_focusNext()
+               BaseWidget.tk_focusPrev()
+
+      Delegate to `tk_focusNext and tk_focusPrev <https://www.tcl.tk/man/tcl8.6/TkCmd/focusNext.htm>`_.
+
+      Return ``None`` instead of empty string if there's no result.
+
+
+   .. method:: BaseWidget.bell(displayof=0)
+
+
+Scheduling calls
+~~~~~~~~~~~~~~~~
+
+   .. method:: BaseWidget.after(ms, func=None, *args)
+
+      Execute *func* with *args* from the event loop after *ms* milliseconds.
+      Without *func*, the Tcl interpreter sleeps (synchronously and
+      non-interruptably) for *ms* milliseconds.
+
+      Delegates to `after <https://www.tcl.tk/man/tcl8.6/TclCmd/after.htm#M6>`_.
+
+      Returns an identifier that can be passed to :meth:`after_cancel`.
+
+      See `Python callbacks` for Tcl-level semantics.
+
+
+   .. method:: BaseWidget.after_idle(func, *args)
+
+      Execute *func* with *args* as an "idle callback", i.e. when processing an event
+      is requested, and there are no events in the queue.
+
+      Delegates to `after idle <https://www.tcl.tk/man/tcl8.6/TclCmd/after.htm#M9>`_.
+
+
+   .. method:: BaseWidget.after_cancel(id)
+
+      Cancel a pending :func:`after` event.
+
+      Delegates to `after cancel <https://www.tcl.tk/man/tcl8.6/TclCmd/after.htm#M7>`_.
+
+
+Clipboard
+~~~~~~~~~
+
+Provides access to the Tk clipboard. It integrates with the system clipboard
+in environments that have it -- at least, Windows, MacOS and X11.
+
+
+   .. method:: BaseWidget.clipboard_get(**kw)
+               BaseWidget.clipboard_clear(**kw)
+               BaseWidget.clipboard_append(string, **kw)
+
+      Delegate to
+      `clipboard get <https://www.tcl.tk/man/tcl8.6/TkCmd/clipboard.htm#M7>`_,
+      `clipboard clear <https://www.tcl.tk/man/tcl8.6/TkCmd/clipboard.htm#M6>`_,
+      and
+      `clipboard append <https://www.tcl.tk/man/tcl8.6/TkCmd/clipboard.htm#M5>`_,
+      correspondingly.
+
+      *kw* accepts the same named arguments that the corresponding command does.
+
+      In :meth:`clipboard_get`, *type* defaults to ``'UTF8_STRING'`` for X11
+      if the system supports it.
+
+      In :meth:`clipboard_clear` and :meth:`clipboard_append`, *displayOf*
+      defaults to the current widget.
+
+
+Input grab
+~~~~~~~~~~
+
+`Tk grabs <https://www.tcl.tk/man/tcl8.6/TkCmd/grab.htm>`_
+force mouse and keyboard events to be received by a specified window subtree.
+
+   .. method:: BaseWidget.grab_current()
+               BaseWidget.grab_release()
+               BaseWidget.grab_set()
+               BaseWidget.grab_set_global()
+               BaseWidget.grab_status()
+
+      Delegate to
+      `grab current <https://www.tcl.tk/man/tcl8.6/TkCmd/grab.htm#M6>`_,
+      `grab release <https://www.tcl.tk/man/tcl8.6/TkCmd/grab.htm#M7>`_,
+      `grab set <https://www.tcl.tk/man/tcl8.6/TkCmd/grab.htm#M8>`_,
+      `grab set -global <https://www.tcl.tk/man/tcl8.6/TkCmd/grab.htm#M8>`_,
+      and `grab status <https://www.tcl.tk/man/tcl8.6/TkCmd/grab.htm#M9>`_,
+      correspondingly, with the current widget as an argument.
+
+      :meth:`grab_current` and :meth:`grab_status` return
+      ``None`` if there's no grab, and :meth:`grab_current`
+      returns a :class:`BaseWidget` otherwise.
+
+
+Option database management
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   .. method:: BaseWidget.option_add(pattern, value, priority = None)
+               BaseWidget.option_clear()
+               BaseWidget.option_get(name, className)
+               BaseWidget.option_readfile(fileName, priority = None)
+
+      Delegate to the corresponding
+      `option <https://www.tcl.tk/man/tcl8.6/TkCmd/option.htm>`_ subcommands.
+
+      :meth:`option_get` acts on the current widget.
+
+
+   .. method:: BaseWidget.selection_clear(**kw)
+   .. method:: BaseWidget.selection_get(**kw)
+   .. method:: BaseWidget.selection_handle(command, **kw)
+   .. method:: BaseWidget.selection_own(**kw)
+   .. method:: BaseWidget.selection_own_get(**kw)
+   .. method:: BaseWidget.send(interp, cmd, *args)
+   .. method:: BaseWidget.lower(belowThis=None)
+   .. method:: BaseWidget.tkraise(aboveThis=None)
+   .. method:: BaseWidget.lift(aboveThis=None)
+   .. method:: BaseWidget.winfo_atom(name, displayof=0)
+   .. method:: BaseWidget.winfo_atomname(id, displayof=0)
+   .. method:: BaseWidget.winfo_cells()
+   .. method:: BaseWidget.winfo_children()
+   .. method:: BaseWidget.winfo_class()
+   .. method:: BaseWidget.winfo_colormapfull()
+   .. method:: BaseWidget.winfo_containing(rootX, rootY, displayof=0)
+   .. method:: BaseWidget.winfo_depth()
+   .. method:: BaseWidget.winfo_exists()
+   .. method:: BaseWidget.winfo_fpixels(number)
+   .. method:: BaseWidget.winfo_geometry()
+   .. method:: BaseWidget.winfo_height()
+   .. method:: BaseWidget.winfo_id()
+   .. method:: BaseWidget.winfo_interps(displayof=0)
+   .. method:: BaseWidget.winfo_ismapped()
+   .. method:: BaseWidget.winfo_manager()
+   .. method:: BaseWidget.winfo_name()
+   .. method:: BaseWidget.winfo_parent()
+   .. method:: BaseWidget.winfo_pathname(id, displayof=0)
+   .. method:: BaseWidget.winfo_pixels(number)
+   .. method:: BaseWidget.winfo_pointerx()
+   .. method:: BaseWidget.winfo_pointerxy()
+   .. method:: BaseWidget.winfo_pointery()
+   .. method:: BaseWidget.winfo_reqheight()
+   .. method:: BaseWidget.winfo_reqwidth()
+   .. method:: BaseWidget.winfo_rgb(color)
+   .. method:: BaseWidget.winfo_rootx()
+   .. method:: BaseWidget.winfo_rooty()
+   .. method:: BaseWidget.winfo_screen()
+   .. method:: BaseWidget.winfo_screencells()
+   .. method:: BaseWidget.winfo_screendepth()
+   .. method:: BaseWidget.winfo_screenheight()
+   .. method:: BaseWidget.winfo_screenmmheight()
+   .. method:: BaseWidget.winfo_server()
+   .. method:: BaseWidget.winfo_toplevel()
+   .. method:: BaseWidget.winfo_viewable()
+   .. method:: BaseWidget.winfo_visual()
+   .. method:: BaseWidget.winfo_visualid()
+   .. method:: BaseWidget.winfo_visualsavailable(includeids=False)
+   .. method:: BaseWidget.winfo_vrootheight()
+   .. method:: BaseWidget.winfo_vrootwidth()
+   .. method:: BaseWidget.winfo_vrootx()
+   .. method:: BaseWidget.winfo_vrooty()
+   .. method:: BaseWidget.winfo_width()
+   .. method:: BaseWidget.winfo_x()
+   .. method:: BaseWidget.winfo_y()
+
+      See `winfo <https://www.tcl.tk/man/tcl8.6/TkCmd/winfo.htm>`_.
+      The below only lists Tkinter-specific semantics.
+
+      * :meth:`winfo_atom` returns an integer instead of a string.
+      * :meth:`winfo_atom` None
+
+   .. method:: BaseWidget.update()
+   .. method:: BaseWidget.update_idletasks()
+   .. method:: BaseWidget.bindtags(tagList=None)
+   .. method:: BaseWidget.bind(sequence=None, func=None, add=None)
+   .. method:: BaseWidget.unbind(sequence, funcid=None)
+   .. method:: BaseWidget.bind_all(sequence=None, func=None, add=None)
+   .. method:: BaseWidget.unbind_all(sequence)
+   .. method:: BaseWidget.bind_class(className, sequence=None, func=None, add=None)
+   .. method:: BaseWidget.unbind_class(className, sequence)
+   .. method:: BaseWidget.mainloop(n=0)
+   .. method:: BaseWidget.quit()
+   .. method:: BaseWidget.nametowidget(name)
+   .. method:: BaseWidget.configure(cnf=None, **kw)
+   .. method:: BaseWidget.config(cnf=None, **kw)
+   .. method:: BaseWidget.cget(key)
+   .. method:: BaseWidget.keys()
+   .. method:: BaseWidget.__str__()
+   .. method:: BaseWidget.pack_propagate(flag=_noarg_)
+   .. method:: BaseWidget.pack_slaves()
+   .. method:: BaseWidget.slaves()
+   .. method:: BaseWidget.place_slaves()
+   .. method:: BaseWidget.grid_anchor(anchor=None)
+   .. method:: BaseWidget.anchor(anchor=None)
+   .. method:: BaseWidget.grid_bbox(column=None, row=None, col2=None, row2=None)
+   .. method:: BaseWidget.bbox(column=None, row=None, col2=None, row2=None)
+   .. method:: BaseWidget.grid_columnconfigure(index, cnf={}, **kw)
+   .. method:: BaseWidget.columnconfigure(index, cnf={}, **kw)
+   .. method:: BaseWidget.grid_location(x, y)
+   .. method:: BaseWidget.grid_propagate(flag=_noarg_)
+   .. method:: BaseWidget.grid_rowconfigure(index, cnf={}, **kw)
+   .. method:: BaseWidget.rowconfigure(index, cnf={}, **kw)
+   .. method:: BaseWidget.grid_size()
+   .. method:: BaseWidget.size()
+   .. method:: BaseWidget.grid_slaves(row=None, column=None)
+   .. method:: BaseWidget.event_add(virtual, *sequences)
+   .. method:: BaseWidget.event_delete(virtual, *sequences)
+   .. method:: BaseWidget.event_generate(sequence, **kw)
+   .. method:: BaseWidget.event_info(virtual=None)
+   .. method:: BaseWidget.image_names()
+   .. method:: BaseWidget.image_types()
+   .. method:: BaseWidget.register(func, subst=None, needcleanup=1)
+
+
+
+
+
 Pack
 Place
 Grid
@@ -749,80 +1041,66 @@ Other modules that provide Tk support include:
    Turtle graphics in a Tk window.
 
 
-The Window Manager
-^^^^^^^^^^^^^^^^^^
-
-.. index:: single: window manager (widgets)
-
-In Tk, there is a utility command, ``wm``, for interacting with the window
-manager.  Options to the ``wm`` command allow you to control things like titles,
-placement, icon bitmaps, and the like.  In :mod:`tkinter`, these commands have
-been implemented as methods on the :class:`Wm` class.  Toplevel widgets are
-subclassed from the :class:`Wm` class, and so can call the :class:`Wm` methods
-directly.
-
-To get at the toplevel window that contains a given widget, you can often just
-refer to the widget's master.  Of course if the widget has been packed inside of
-a frame, the master won't represent a toplevel window.  To get at the toplevel
-window that contains an arbitrary widget, you can call the :meth:`_root` method.
-This method begins with an underscore to denote the fact that this function is
-part of the implementation, and not an interface to Tk functionality.
-
-Here are some examples of typical usage::
-
-   import tkinter as tk
-
-   class App(tk.Frame):
-       def __init__(self, master=None):
-           super().__init__(master)
-           self.pack()
-
-   # create the application
-   myapp = App()
-
-   #
-   # here are method calls to the window manager class
-   #
-   myapp.master.title("My Do-Nothing Application")
-   myapp.master.maxsize(1000, 400)
-
-   # start the program
-   myapp.mainloop()
-
-   
 Common semantics
-================
+----------------
+
+.. _tcl-types:
 
 Python-Tcl type conversion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In Tcl, on script level, `everything is a string <https://wiki.tcl.tk/3018>`_
-and internally represented as a `Tcl_Obj <https://www.tcl.tk/man/tcl8.6/TclLib/Object.htm>`_.
+and internally represented as a
+`Tcl_Obj <https://www.tcl.tk/man/tcl8.6/TclLib/Object.htm>`_.
 Due to this, every discernible Tcl value has a string representation.
-If a Tcl command expects a different type (even a compound one)
 
-However, on C API level, a ``Tcl_Obj`` can be initialized directly from
-all sorts of different C types, and Tkinter uses this when passing Python
-objects to Tcl calls -- to avoid any inaccuracies
+However, on C API level, a ``Tcl_Obj`` can have an internal representation of
+various types and be initialized directly from
+many C types, and Tkinter uses this when passing Python
+objects to Tcl calls and getting the results -- to avoid any inaccuracies
 (e.g. when passing floating-point numbers)
 and discrepancies between :func:`str` and Tcl string representations.
 
 :class:`bool`, :class:`str`, :class:`bytes` and :class:`float` are
-converted by the corresponding `Tcl_New*Obj <https://www.tcl.tk/man/tcl8.6/TclLib/contents.htm>`_.
-For integer, different APIs are tried until one can accomodate the value.
-Lists and tuples are `converted <https://www.tcl.tk/man/tcl8.6/TclLib/ListObj.htm>`_
-to a Tcl `list <https://www.tcl.tk/man/tcl8.6/TclCmd/list.htm>`_.
-:class:`str`s with wide Unicode characters would produce a :class:`TclError` if
-the Tcl build doesn't support them. A :class:`_tkinter.Tcl_Obj` gives the
-wrapped object, naturally.
+passed to the corresponding
+`Tcl_New*Obj <https://www.tcl.tk/man/tcl8.6/TclLib/contents.htm>`_.
+For integers, Tcl has a number of subtypes, and one that can accomodate the
+Python's value is selected.
+Lists and tuples are converted
+to a `Tcl list <https://www.tcl.tk/man/tcl8.6/TclLib/ListObj.htm>`_.
+A :class:`_tkinter.Tcl_Obj` gives the
+wrapped object, naturally. For other Python types, their :func:`str` is passed.
 
-For other objects, their :func:`str` is processed.
+:class:`str`'s with wide Unicode characters will cause a :exc:`TclError` if
+Tcl is configured without wide Unicode support
+(`TCL_UTF_MAX is 3 <https://www.tcl.tk/man/tcl8.6/TclLib/Utf.htm#M5>`_).
 
-For the return value, the reverse conversion is done.
-`Tcl_Obj->typePtr <https://www.tcl.tk/man/tcl/TclLib/Object.htm#M6>`
-is used to detemine the type, so e.g. if a command is declared to return
-0 or 1, it will not be converted to ``bool``.
+When converting a value back into Python, the target type is determined by
+*Tcl_Obj::typePtr* as per
+`Tcl_Obj specification <https://www.tcl.tk/man/tcl8.6/TclLib/Object.htm#M6>`_.
+Booleans, bytearrays, integer subtypes, strings are converted into the
+corresponding Python types. A Tcl list is converted into a :class:`tuple`.
+For other Tcl types, a :class:`_tkinter.Tcl_Obj` is returned.
 
+If :data:`wantobjects` is unset when a :class:`Tk` instance is created,
+automatic result convertion is not done; instead, a Tcl string representation
+of the result is returned. This doesn't affect methods that are explicitly
+documented to return specific Python types because they do an additional
+manual conversion.
+
+
+
+Python callbacks
+^^^^^^^^^^^^^^^^
+
+A Tcl callback with Python payload
+(event handlers, :meth:`BaseWidget.after` scheduled calls etc)
+are implemented as a
+`custom Tcl C command <https://www.tcl.tk/man/tcl8.6/TclLib/CrtCommand.htm>`_
+with autogenerated name that calls the Python payload.
+
+For one-off callbacks like :meth:`BaseWidget.after` delete the command after
+making the specified call.
 
 
 .. index:: single: Tcl/Tk Data Types
@@ -1068,12 +1346,6 @@ use raw reads or ``os.read(file.fileno(), maxbytecount)``.
 
    Unregisters a file handler.
 
-
-.. data:: READABLE
-          WRITABLE
-          EXCEPTION
-
-   Constants used in the *mask* arguments.
 
 .. seealso::
 
