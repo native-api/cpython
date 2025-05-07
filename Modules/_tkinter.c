@@ -205,7 +205,7 @@ _get_tcl_lib_path(void)
    waiting for events.
 
    To solve this problem, a separate lock for Tcl is introduced.
-   We normally treat holding it as incompatible with holding Python's
+   We strive to not hold it at the same time as Python's
    interpreter lock. The following macros manipulate both locks together.
 
    ENTER_TCL and LEAVE_TCL are brackets, just like Py_BEGIN_ALLOW_THREADS and
@@ -222,7 +222,9 @@ _get_tcl_lib_path(void)
    finer lock control are: ENTER_OVERLAP acquires the Python lock (and restores
    the thread state) when already holding the Tcl lock; LEAVE_OVERLAP releases
    the Python lock and keeps the Tcl lock; and LEAVE_OVERLAP_TCL releases the
-   Tcl lock and keeps the Python lock.
+   Tcl lock and keeps the Python lock. LEAVE_OVERLAP_TCL_ON_ERROR is the same
+   as LEAVE_OVERLAP_TCL but is not a bracket; it is to be used in error handling
+   blocks that exit a function early.
 
    By contrast, ENTER_PYTHON and LEAVE_PYTHON are used in Tcl event
    handlers when the handler needs to use Python.  Such event handlers
@@ -322,7 +324,10 @@ if (tcl_lock) { \
     Py_BEGIN_ALLOW_THREADS
 
 #define LEAVE_OVERLAP_TCL \
-    tcl_tstate = NULL; RELEASE_TCL_LOCK }
+    LEAVE_OVERLAP_TCL_ON_ERROR }
+
+#define LEAVE_OVERLAP_TCL_ON_ERROR \
+    tcl_tstate = NULL; RELEASE_TCL_LOCK
 
 #define ENTER_PYTHON \
     { PyThreadState *tstate = tcl_tstate; tcl_tstate = NULL; PyEval_RestoreThread((tstate)); }
@@ -1568,10 +1573,12 @@ Tkapp_Call(PyObject *selfptr, PyObject *args)
         ENTER_OVERLAP
 
         objv = Tkapp_CallArgs(args, objStore, &objc);
+        if (!objv) {
+            LEAVE_OVERLAP_TCL_ON_ERROR
+            return NULL;
+        }
 
-        if (objv) {
-
-            LEAVE_OVERLAP
+        LEAVE_OVERLAP
 
         i = Tcl_EvalObjv(self->interp, objc, objv, flags);
 
@@ -1582,14 +1589,9 @@ Tkapp_Call(PyObject *selfptr, PyObject *args)
         else
             res = Tkapp_ObjectResult(self);
 
-            LEAVE_OVERLAP
+        LEAVE_OVERLAP_TCL
 
         Tkapp_CallDeallocArgs(objv, objStore, objc);
-
-            ENTER_OVERLAP
-            
-    }
-        LEAVE_OVERLAP_TCL
     }
     return res;
 }
@@ -1866,10 +1868,10 @@ SetVar(TkappObject *self, PyObject *args, int flags)
 
         ENTER_TCL
         ENTER_OVERLAP
+
         newval = AsObj(newValue);
         if (newval == NULL) {
-            {
-               LEAVE_OVERLAP_TCL
+            LEAVE_OVERLAP_TCL_ON_ERROR
             return NULL;
         }
 
@@ -1882,14 +1884,13 @@ SetVar(TkappObject *self, PyObject *args, int flags)
         }
         LEAVE_OVERLAP
 
-        ok = Tcl_SetVar2Ex(Tkapp_Interp(self), name1, NULL,
-                           newval, flags);
+            ok = Tcl_SetVar2Ex(Tkapp_Interp(self), name1, NULL,
+                               newval, flags);
         ENTER_OVERLAP
         if (!ok)
             Tkinter_Error(self);
         else {
             res = Py_NewRef(Py_None);
-        }
         }
         LEAVE_OVERLAP_TCL
         break;
@@ -1903,8 +1904,7 @@ SetVar(TkappObject *self, PyObject *args, int flags)
         ENTER_OVERLAP
         newval = AsObj(newValue);
         if (newval == NULL) {
-            {
-               LEAVE_OVERLAP_TCL
+            LEAVE_OVERLAP_TCL_ON_ERROR
             return NULL;
         }
 
@@ -1929,7 +1929,6 @@ SetVar(TkappObject *self, PyObject *args, int flags)
             Tkinter_Error(self);
         else {
             res = Py_NewRef(Py_None);
-        }
         }
         LEAVE_OVERLAP_TCL
         break;
