@@ -1,5 +1,3 @@
-#! /usr/bin/env python3
-
 """Python interface for the 'lsprof' profiler.
    Compatible with the 'profile' module.
 """
@@ -7,6 +5,9 @@
 __all__ = ["run", "runctx", "Profile"]
 
 import _lsprof
+import importlib.machinery
+import importlib.util
+import io
 import profile as _pyprofile
 
 # ____________________________________________________________
@@ -25,11 +26,11 @@ runctx.__doc__ = _pyprofile.runctx.__doc__
 # ____________________________________________________________
 
 class Profile(_lsprof.Profiler):
-    """Profile(custom_timer=None, time_unit=None, subcalls=True, builtins=True)
+    """Profile(timer=None, timeunit=None, subcalls=True, builtins=True)
 
     Builds a profiler object using the specified timer function.
     The default timer is a fast built-in one based on real time.
-    For custom timer functions returning integers, time_unit can
+    For custom timer functions returning integers, timeunit can
     be a float specifying a scale (i.e. how long each integer unit
     is, in seconds).
     """
@@ -39,7 +40,9 @@ class Profile(_lsprof.Profiler):
 
     def print_stats(self, sort=-1):
         import pstats
-        pstats.Stats(self).strip_dirs().sort_stats(sort).print_stats()
+        if not isinstance(sort, tuple):
+            sort = (sort,)
+        pstats.Stats(self).strip_dirs().sort_stats(*sort).print_stats()
 
     def dump_stats(self, file):
         import marshal
@@ -103,12 +106,19 @@ class Profile(_lsprof.Profiler):
         return self
 
     # This method is more useful to profile a single function call.
-    def runcall(self, func, *args, **kw):
+    def runcall(self, func, /, *args, **kw):
         self.enable()
         try:
             return func(*args, **kw)
         finally:
             self.disable()
+
+    def __enter__(self):
+        self.enable()
+        return self
+
+    def __exit__(self, *exc_info):
+        self.disable()
 
 # ____________________________________________________________
 
@@ -124,6 +134,7 @@ def main():
     import os
     import sys
     import runpy
+    import pstats
     from optparse import OptionParser
     usage = "cProfile.py [-o output_file_path] [-s sort] [-m module | scriptfile] [arg] ..."
     parser = OptionParser(usage=usage)
@@ -132,7 +143,8 @@ def main():
         help="Save stats to <outfile>", default=None)
     parser.add_option('-s', '--sort', dest="sort",
         help="Sort order when printing to stdout, based on pstats.Stats class",
-        default=-1)
+        default=2,
+        choices=sorted(pstats.Stats.sort_arg_dict_default))
     parser.add_option('-m', dest="module", action="store_true",
         help="Profile a library module", default=False)
 
@@ -142,6 +154,11 @@ def main():
 
     (options, args) = parser.parse_args()
     sys.argv[:] = args
+
+    # The script that we're profiling may chdir, so capture the absolute path
+    # to the output file at startup.
+    if options.outfile is not None:
+        options.outfile = os.path.abspath(options.outfile)
 
     if len(args) > 0:
         if options.module:
@@ -153,15 +170,32 @@ def main():
         else:
             progname = args[0]
             sys.path.insert(0, os.path.dirname(progname))
-            with open(progname, 'rb') as fp:
+            with io.open_code(progname) as fp:
                 code = compile(fp.read(), progname, 'exec')
-            globs = {
-                '__file__': progname,
-                '__name__': '__main__',
+            spec = importlib.machinery.ModuleSpec(name='__main__', loader=None,
+                                                  origin=progname)
+            module = importlib.util.module_from_spec(spec)
+            # Set __main__ so that importing __main__ in the profiled code will
+            # return the same namespace that the code is executing under.
+            sys.modules['__main__'] = module
+            # Ensure that we're using the same __dict__ instance as the module
+            # for the global variables so that updates to globals are reflected
+            # in the module's namespace.
+            globs = module.__dict__
+            globs.update({
+                '__spec__': spec,
+                '__file__': spec.origin,
+                '__name__': spec.name,
                 '__package__': None,
                 '__cached__': None,
-            }
-        runctx(code, globs, None, options.outfile, options.sort)
+            })
+
+        try:
+            runctx(code, globs, None, options.outfile, options.sort)
+        except BrokenPipeError as exc:
+            # Prevent "Exception ignored" during interpreter shutdown.
+            sys.stdout = None
+            sys.exit(exc.errno)
     else:
         parser.print_usage()
     return parser
